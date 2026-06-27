@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (
     BigInteger,
     String,
@@ -5,9 +7,12 @@ from sqlalchemy import (
     Boolean,
     Text
 )
-from datetime import datetime
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column
+)
+
 from sqlalchemy.sql import func
 
 from .base import Base
@@ -27,12 +32,16 @@ class TableMetadataEntity(Base):
         String(255)
     )
 
-    schema_name_name: Mapped[str] = mapped_column(
+    schema_name: Mapped[str] = mapped_column(
         String(255)
     )
 
     table_name: Mapped[str] = mapped_column(
         String(255)
+    )
+
+    table_type: Mapped[str] = mapped_column(
+        String(50)
     )
 
     business_name: Mapped[str | None] = mapped_column(
@@ -48,6 +57,11 @@ class TableMetadataEntity(Base):
     row_count: Mapped[int | None] = mapped_column(
         BigInteger,
         nullable=True
+    )
+
+    is_fact_table: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
     )
 
     is_active: Mapped[bool] = mapped_column(

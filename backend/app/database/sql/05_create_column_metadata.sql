@@ -4,6 +4,8 @@ CREATE TABLE column_metadata (
 
     table_id BIGINT NOT NULL,
 
+    schema_name NVARCHAR(255) NOT NULL,
+
     table_name NVARCHAR(255) NOT NULL,
 
     column_name NVARCHAR(255) NOT NULL,
@@ -13,6 +15,12 @@ CREATE TABLE column_metadata (
     description NVARCHAR(MAX) NULL,
 
     data_type NVARCHAR(100) NOT NULL,
+
+    max_length INT NULL,
+
+    ordinal_position INT NULL,
+
+    default_value NVARCHAR(MAX) NULL,
 
     is_nullable BIT NOT NULL,
 
@@ -31,8 +39,12 @@ CREATE TABLE column_metadata (
         REFERENCES table_metadata(id)
 
 );
+
 CREATE INDEX IX_column_metadata_table_id
 ON column_metadata(table_id);
+
+CREATE INDEX IX_column_metadata_schema_name
+ON column_metadata(schema_name);
 
 CREATE INDEX IX_column_metadata_table_name
 ON column_metadata(table_name);

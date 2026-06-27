@@ -9,12 +9,12 @@ from sqlalchemy import (
     ForeignKey
 )
 
-from sqlalchemy.sql import func
-
 from sqlalchemy.orm import (
     Mapped,
     mapped_column
 )
+
+from sqlalchemy.sql import func
 
 from .base import Base
 
@@ -31,6 +31,10 @@ class ColumnMetadataEntity(Base):
 
     table_id: Mapped[int] = mapped_column(
         ForeignKey("table_metadata.id")
+    )
+
+    schema_name: Mapped[str] = mapped_column(
+        String(255)
     )
 
     table_name: Mapped[str] = mapped_column(
@@ -53,6 +57,21 @@ class ColumnMetadataEntity(Base):
 
     data_type: Mapped[str] = mapped_column(
         String(100)
+    )
+
+    max_length: Mapped[int | None] = mapped_column(
+        BigInteger,
+        nullable=True
+    )
+
+    ordinal_position: Mapped[int | None] = mapped_column(
+        BigInteger,
+        nullable=True
+    )
+
+    default_value: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
     )
 
     is_nullable: Mapped[bool] = mapped_column(

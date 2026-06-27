@@ -1,482 +1,262 @@
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.metadata.metadata_models import (
-    TableMetadata,
-    ColumnMetadata,
-    MetadataLoadResult,
-    RelationshipMetadata
+from app.audit.audit_models import AuditReport
+
+from app.database.repositories.table_metadata_repository import (
+    TableMetadataRepository,
 )
 
-from app.database.entities.table_metadata import (
-    TableMetadataEntity
+from app.database.repositories.column_metadata_repository import (
+    ColumnMetadataRepository,
 )
 
-from app.database.entities.column_metadata import (
-    ColumnMetadataEntity
+from app.database.repositories.relationship_repository import (
+    RelationshipRepository,
 )
 
-from app.database.entities.relationship import (
-    RelationshipEntity
-)
+from datetime import datetime
 
-import uuid
+from app.database.entities.table_metadata import TableMetadataEntity
 
-from app.database.entities.agent_log import (
-    AgentLogEntity
-)
+from app.database.entities.column_metadata import ColumnMetadataEntity
 
-from app.metadata.constants import (
-    METADATA_AGENT_NAME,
-    STATUS_SUCCESS,
-    STATUS_ERROR
-)
+from app.database.entities.relationship import RelationshipEntity
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 class MetadataLoader:
+    """
+    Load database metadata from an AuditReport
+    into the IMMO_AI metadata database.
+    """
 
-    def __init__(self, db: Session):
+    def __init__(
+        self,
+        db: Session,
+    ):
+
         self.db = db
 
-    def _build_table_key(
-        self,
-        source_database: str,
-        schema_name_name: str,
-        table_name: str
-    ) -> tuple:
+        self.table_repository = TableMetadataRepository(db)
 
-        return (
-            source_database,
-            schema_name_name,
-            table_name
-        )
+        self.column_repository = ColumnMetadataRepository(db)
 
-    def _build_column_key(
-        self,
-        table_name: str,
-        column_name: str
-    ) -> tuple:
-
-        return (
-            table_name,
-            column_name
-        )
-    def save_tables(
-        self,
-        tables: list[TableMetadata]
-    ) -> MetadataLoadResult:
-
-        result = MetadataLoadResult()
-
-        try:
-
-            existing_tables = self.db.scalars(
-                select(TableMetadataEntity)
-            ).all()
-
-            existing_tables_dict = {
-                self._build_table_key(
-                    table.source_database,
-                    table.schema_name_name,
-                    table.table_name
-                ): table
-                for table in existing_tables
-            }
-
-            for table in tables:
-
-                try:
-
-                    table_key = self._build_table_key(
-                        table.source_database,
-                        table.schema_name_name,
-                        table.table_name
-                    )
-
-                    existing_table = existing_tables_dict.get(
-                        table_key
-                    )
-
-                    if existing_table:
-
-                        existing_table.business_name = (
-                            table.business_name
-                        )
-
-                        existing_table.description = (
-                            table.description
-                        )
-
-                        existing_table.row_count = (
-                            table.row_count
-                        )
-
-                        existing_table.is_active = (
-                            table.is_active
-                        )
-
-                    else:
-
-                        new_table = TableMetadataEntity(
-                            source_database=table.source_database,
-                            schema_name_name=table.schema_name_name,
-                            table_name=table.table_name,
-                            business_name=table.business_name,
-                            description=table.description,
-                            row_count=table.row_count,
-                            is_active=table.is_active
-                        )
-
-                        self.db.add(new_table)
-
-                    result.tables_processed += 1
-
-                except Exception as e:
-
-                    result.errors.append(
-                        f"Table {table.table_name}: {str(e)}"
-                    )
-
-                    result.success = False
-
-            self.db.commit()
-
-        except Exception as e:
-
-            self.db.rollback()
-
-            result.errors.append(str(e))
-
-            result.success = False
-
-        return result
-    
-    def _add_error(
-        self,
-        result: MetadataLoadResult,
-        message: str
-    ) -> None:
-
-        result.errors.append(message)
-        result.success = False
-    
-    def save_columns(
-        self,
-        columns: list[ColumnMetadata]
-    ) -> MetadataLoadResult:
-
-        result = MetadataLoadResult()
-
-        try:
-
-            # Chargement des tables déjà enregistrées
-            tables = self.db.scalars(
-                select(TableMetadataEntity)
-            ).all()
-
-            table_mapping = {
-                table.table_name: table.id
-                for table in tables
-            }
-
-            existing_columns = self.db.scalars(
-                select(ColumnMetadataEntity)
-            ).all()
-
-            existing_columns_dict = {
-                self._build_column_key(
-                    column.table_name,
-                    column.column_name
-                ): column
-                for column in existing_columns
-            }
-
-            for column in columns:
-
-                try:
-
-                    table_id = table_mapping.get(
-                        column.table_name
-                    )
-
-                    if table_id is None:
-
-                        result.warnings.append(
-                            f"Table not found for column "
-                            f"{column.table_name}"
-                        )
-
-                        continue
-
-                    column_key = self._build_column_key(
-                        column.table_name,
-                        column.column_name
-                    )
-
-                    existing_column = (
-                        existing_columns_dict.get(
-                            column_key
-                        )
-                    )
-
-                    if existing_column:
-
-                        existing_column.business_name = (
-                            column.business_name
-                        )
-
-                        existing_column.description = (
-                            column.description
-                        )
-
-                        existing_column.data_type = (
-                            column.data_type
-                        )
-
-                        existing_column.is_nullable = (
-                            column.is_nullable
-                        )
-
-                        existing_column.is_primary_key = (
-                            column.is_primary_key
-                        )
-
-                        existing_column.is_foreign_key = (
-                            column.is_foreign_key
-                        )
-
-                        existing_column.sample_values = (
-                            column.sample_values
-                        )
-
-                    else:
-
-                        new_column = ColumnMetadataEntity(
-                            table_id=table_id,
-                            table_name=column.table_name,
-                            column_name=column.column_name,
-                            business_name=column.business_name,
-                            description=column.description,
-                            data_type=column.data_type,
-                            is_nullable=column.is_nullable,
-                            is_primary_key=column.is_primary_key,
-                            is_foreign_key=column.is_foreign_key,
-                            sample_values=column.sample_values
-                        )
-
-                        self.db.add(new_column)
-
-                    result.columns_processed += 1
-
-                except Exception as e:
-
-                    self._add_error(
-                        result,
-                        f"Column {column.column_name}: {str(e)}"
-                    )
-
-            if result.columns_processed > 0:
-                self.db.commit()
-
-        except Exception as e:
-
-            self.db.rollback()
-
-            self._add_error(
-                result,
-                str(e)
-            )
-
-        return result
-    
-    
-    def _build_relationship_key(
-        self,
-        source_table: str,
-        source_column: str,
-        target_table: str,
-        target_column: str
-    ) -> tuple:
-
-        return (
-            source_table,
-            source_column,
-            target_table,
-            target_column
-        )
-    
-    def save_relationships(
-        self,
-        relationships: list[RelationshipMetadata]
-    ) -> MetadataLoadResult:
-
-        result = MetadataLoadResult()
-
-        try:
-
-            existing_relationships = self.db.scalars(
-                select(RelationshipEntity)
-            ).all()
-
-            existing_relationships_dict = {
-                self._build_relationship_key(
-                    relation.source_table,
-                    relation.source_column,
-                    relation.target_table,
-                    relation.target_column
-                ): relation
-                for relation in existing_relationships
-            }
-
-            for relationship in relationships:
-
-                try:
-
-                    relationship_key = (
-                        self._build_relationship_key(
-                            relationship.source_table,
-                            relationship.source_column,
-                            relationship.target_table,
-                            relationship.target_column
-                        )
-                    )
-
-                    existing_relationship = (
-                        existing_relationships_dict.get(
-                            relationship_key
-                        )
-                    )
-
-                    if existing_relationship:
-
-                        existing_relationship.relationship_type = (
-                            relationship.relationship_type
-                        )
-
-                        existing_relationship.description = (
-                            relationship.description
-                        )
-
-                    else:
-
-                        new_relationship = RelationshipEntity(
-                            source_table=relationship.source_table,
-                            source_column=relationship.source_column,
-                            target_table=relationship.target_table,
-                            target_column=relationship.target_column,
-                            relationship_type=relationship.relationship_type,
-                            description=relationship.description
-                        )
-
-                        self.db.add(new_relationship)
-
-                    result.relationships_processed += 1
-
-                except Exception as e:
-
-                    self._add_error(
-                        result,
-                        f"Relationship error: {str(e)}"
-                    )
-
-            if result.relationships_processed > 0:
-                self.db.commit()
-
-        except Exception as e:
-
-            self.db.rollback()
-
-            self._add_error(
-                result,
-                str(e)
-            )
-
-        return result
-    
-    def _build_log_message(
-        self,
-        result: MetadataLoadResult
-    ) -> str:
-
-        return (
-            f"Tables={result.tables_processed}, "
-            f"Columns={result.columns_processed}, "
-            f"Relationships={result.relationships_processed}, "
-            f"Errors={len(result.errors)}"
-        )
-    
-    def create_log(
-        self,
-        result: MetadataLoadResult
-    ) -> None:
-
-        try:
-
-            log = AgentLogEntity(
-
-                request_id=str(uuid.uuid4()),
-
-                agent_name=METADATA_AGENT_NAME,
-
-                status=(
-                    STATUS_SUCCESS
-                    if result.success
-                    else STATUS_ERROR
-                ),
-
-                user_question=None,
-
-                generated_sql=None,
-
-                model_name=None,
-
-                user_id=None,
-
-                execution_time_ms=None,
-
-                rows_returned=None,
-
-                error_message=(
-                    "\n".join(result.errors)
-                    if result.errors
-                    else None
-                )
-            )
-
-            self.db.add(log)
-
-            self.db.commit()
-
-        except Exception as e:
-
-            self.db.rollback()
-
-            print(
-                f"Error while creating log: {e}"
-            )
+        self.relationship_repository = RelationshipRepository(db)
     
     def load(
         self,
-        tables: list[TableMetadata],
-        columns: list[ColumnMetadata],
-        relationships: list[RelationshipMetadata]
-    ) -> MetadataLoadResult:
+        report: AuditReport,
+    ) -> None:
+        """
+        Load all metadata into IMMO_AI.
+        """
 
-        result = MetadataLoadResult()
+        logger.info("Starting metadata loading...")
 
-        result.merge(
-            self.save_tables(tables)
-        )
+        try:
 
-        result.merge(
-            self.save_columns(columns)
-        )
+            self._load_tables(report)
 
-        result.merge(
-            self.save_relationships(
-                relationships
+            self._load_columns(report)
+
+            self._load_relationships(report)
+
+            self.db.commit()
+
+            logger.info("Metadata loaded successfully.")
+
+        except Exception:
+
+            self.db.rollback()
+
+            logger.exception("Metadata loading failed.")
+
+            raise
+
+    def _load_tables(
+        self,
+        report: AuditReport,
+    ) -> None:
+        """
+        Load all tables into table_metadata.
+        """
+
+        self.table_repository.delete_all()
+
+        entities = []
+
+        for table in report.tables:
+
+            entity = TableMetadataEntity(
+
+                source_database=report.server.database_name,
+
+                schema_name=table.schema_name,
+
+                table_name=table.name,
+
+                table_type=table.table_type,
+
+                business_name=None,
+
+                description=None,
+
+                row_count=table.row_count,
+
+                is_fact_table=table.name.upper().startswith("FACT_"),
+
+                is_active=True,
+
+                last_refresh=datetime.utcnow(),
+
+                updated_at=None,
             )
-        )
 
-        self.create_log(result)
+            entities.append(entity)
 
-        return result
+        self.table_repository.create_many(entities)
+
+        self.db.flush()
+    
+    def _load_columns(
+        self,
+        report: AuditReport,
+    ) -> None:
+        """
+        Load all columns into column_metadata.
+        """
+
+        self.column_repository.delete_all()
+
+        entities = []
+
+        primary_keys = {
+            (
+                pk.schema_name,
+                pk.table,
+                pk.column
+            )
+            for pk in report.primary_keys
+        }
+
+        foreign_keys = {
+            (
+                fk.source_schema,
+                fk.source_table,
+                fk.source_column
+            )
+            for fk in report.foreign_keys
+        }
+
+        table_ids = {
+            (
+                table.schema_name,
+                table.table_name
+            ): table.id
+            for table in self.table_repository.get_all()
+        }
+
+        for column in report.columns:
+
+            entity = ColumnMetadataEntity(
+
+                table_id=table_ids[
+                    (
+                        column.schema_name,
+                        column.table
+                    )
+                ],
+
+                schema_name=column.schema_name,
+
+                table_name=column.table,
+
+                column_name=column.name,
+
+                business_name=None,
+
+                description=None,
+
+                data_type=column.data_type,
+
+                max_length=column.max_length,
+
+                ordinal_position=None,
+
+                default_value=column.default_value,
+
+                is_nullable=column.nullable,
+
+                is_primary_key=(
+                    (
+                        column.schema_name,
+                        column.table,
+                        column.name
+                    )
+                    in primary_keys
+                ),
+
+                is_foreign_key=(
+                    (
+                        column.schema_name,
+                        column.table,
+                        column.name
+                    )
+                    in foreign_keys
+                ),
+
+                sample_values=None,
+
+                updated_at=None,
+            )
+
+            entities.append(entity)
+
+        self.column_repository.create_many(entities)
+    
+    def _load_relationships(
+        self,
+        report: AuditReport,
+    ) -> None:
+        """
+        Load all foreign key relationships into relationships.
+        """
+
+        self.relationship_repository.delete_all()
+
+        entities = []
+
+        for fk in report.foreign_keys:
+
+            entity = RelationshipEntity(
+
+                constraint_name=fk.constraint_name,
+
+                source_schema=fk.source_schema,
+
+                source_table=fk.source_table,
+
+                source_column=fk.source_column,
+
+                target_schema=fk.target_schema,
+
+                target_table=fk.target_table,
+
+                target_column=fk.target_column,
+
+                relationship_type="FOREIGN KEY",
+
+                description=None,
+
+                is_active=True,
+
+                updated_at=None,
+            )
+
+            entities.append(entity)
+
+        self.relationship_repository.create_many(entities)
+
+                
