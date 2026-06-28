@@ -8,10 +8,11 @@ from app.services.providers.provider_factory import (
     ProviderFactory
 )
 
-from app.database.config import settings
-
 
 class LLMService:
+    """
+    Central service used to communicate with an LLM.
+    """
 
     def __init__(
         self,
@@ -25,16 +26,16 @@ class LLMService:
         agent_name: str,
         prompt: str
     ) -> str:
+        """
+        Generate a response using the configured model.
+        """
 
         config = self.model_manager.get(
             agent_name
         )
 
-        api_key = settings.OPENAI_API_KEY
-
         provider = ProviderFactory.create(
-            config.provider,
-            api_key
+            config
         )
 
         return provider.generate(

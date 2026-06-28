@@ -42,10 +42,7 @@ class ModelManager:
                 == agent_name
             )
 
-            .where(
-                ModelConfigEntity.is_active
-                == True
-            )
+            .where(ModelConfigEntity.is_active)
 
         )
 

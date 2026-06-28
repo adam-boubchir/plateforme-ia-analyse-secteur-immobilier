@@ -2,42 +2,28 @@ from app.services.llm_service import LLMService
 
 
 class SQLGenerator:
+    """
+    Generate SQL from a prepared prompt.
+    """
 
-    def __init__(self):
-
-        self.llm = LLMService()
-
-    def generate_sql(
+    def __init__(
         self,
-        question: str,
-        context: str
+        llm_service: LLMService,
+    ):
+
+        self.llm_service = llm_service
+
+    def generate(
+        self,
+        prompt: str,
     ) -> str:
+        """
+        Generate SQL from a prompt.
+        """
 
-        prompt = f"""
-You are an expert SQL Server assistant.
+        sql = self.llm_service.generate(
+            agent_name="sql_agent",
+            prompt=prompt,
+        )
 
-Generate ONLY one SQL query.
-
-Rules:
-
-- SQL Server syntax only.
-- Return ONLY SQL.
-- No explanation.
-- No markdown.
-- Only SELECT queries.
-- Never generate INSERT.
-- Never generate UPDATE.
-- Never generate DELETE.
-- Never generate DROP.
-- Never generate ALTER.
-
-Database schema_name:
-
-{context}
-
-User question:
-
-{question}
-"""
-
-        return self.llm.generate(prompt)
+        return sql.strip()

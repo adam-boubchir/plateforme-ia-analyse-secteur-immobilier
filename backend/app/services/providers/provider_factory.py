@@ -1,26 +1,39 @@
-from app.database.config import settings
+from app.models.agent_models import ModelConfig
 
 from app.services.providers.openai_provider import (
-    OpenAIProvider
+    OpenAIProvider,
+)
+
+from app.services.providers.azure_provider import (
+    AzureProvider,
+)
+
+from app.services.providers.ollama_provider import (
+    OllamaProvider,
 )
 
 
 class ProviderFactory:
+    """
+    Factory used to create the correct LLM provider.
+    """
 
     @staticmethod
     def create(
-        provider_name: str,
-        api_key: str
+        config: ModelConfig
     ):
 
-        provider = provider_name.lower()
+        provider = config.provider.lower()
 
         if provider == "openai":
+            return OpenAIProvider()
 
-            return OpenAIProvider(
-                api_key
-            )
+        if provider == "azure":
+            return AzureProvider()
+
+        if provider == "ollama":
+            return OllamaProvider()
 
         raise ValueError(
-            f"Provider '{provider_name}' is not supported."
+            f"Unsupported provider: {config.provider}"
         )

@@ -52,10 +52,20 @@ class MetadataLoader:
         """
         Load all metadata into IMMO_AI.
         """
-
+        
         logger.info("Starting metadata loading...")
 
         try:
+
+            self.relationship_repository.delete_all()
+
+            self.column_repository.delete_all()
+
+            self.db.flush()
+
+            self.table_repository.delete_all()
+
+            self.db.flush()
 
             self._load_tables(report)
 
@@ -83,9 +93,18 @@ class MetadataLoader:
         Load all tables into table_metadata.
         """
 
-        self.table_repository.delete_all()
-
         entities = []
+
+        row_counts = {
+
+            (
+                stat.schema_name,
+                stat.table
+            ): stat.row_count
+
+            for stat in report.table_statistics
+
+        }
 
         for table in report.tables:
 
@@ -103,7 +122,13 @@ class MetadataLoader:
 
                 description=None,
 
-                row_count=table.row_count,
+                row_count=row_counts.get(
+                    (
+                        table.schema_name,
+                        table.name
+                    ),
+                    0
+                ),
 
                 is_fact_table=table.name.upper().startswith("FACT_"),
 
@@ -127,9 +152,6 @@ class MetadataLoader:
         """
         Load all columns into column_metadata.
         """
-
-        self.column_repository.delete_all()
-
         entities = []
 
         primary_keys = {
@@ -223,8 +245,6 @@ class MetadataLoader:
         """
         Load all foreign key relationships into relationships.
         """
-
-        self.relationship_repository.delete_all()
 
         entities = []
 

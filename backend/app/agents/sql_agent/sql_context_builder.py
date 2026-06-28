@@ -1,70 +1,101 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from app.database.entities.table_metadata import (
-    TableMetadataEntity
-)
-
-from app.database.entities.column_metadata import (
-    ColumnMetadataEntity
-)
-
-from app.database.entities.relationship import (
-    RelationshipEntity
-)
+from app.services.metadata_service import MetadataService
 
 
 class SQLContextBuilder:
+    """
+    Build the database context that will be sent to the LLM.
+    """
 
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(
+        self,
+        metadata_service: MetadataService,
+    ):
+
+        self.metadata_service = metadata_service
 
     def build_context(self) -> str:
-
-        tables = self.db.scalars(
-            select(TableMetadataEntity)
-            .order_by(TableMetadataEntity.table_name)
-        ).all()
-
-        columns = self.db.scalars(
-            select(ColumnMetadataEntity)
-            .order_by(
-                ColumnMetadataEntity.table_name,
-                ColumnMetadataEntity.column_name
-            )
-        ).all()
-
-        relationships = self.db.scalars(
-            select(RelationshipEntity)
-        ).all()
+        """
+        Build the complete SQL context.
+        """
 
         context = []
 
-        context.append(
-            "DATABASE schema_name"
+        context.extend(
+            self._build_header()
         )
 
+        context.extend(
+            self._build_tables_section()
+        )
+
+        context.extend(
+            self._build_relationships_section()
+        )
+
+        return "\n".join(context)
+
+    def _build_header(
+        self,
+    ) -> list[str]:
+        """
+        Build the header section.
+        """
+
+        return [
+            "DATABASE : OBSERVATOIRE_STAGIAIRE",
+            "",
+            "=" * 80,
+            "",
+        ]
+
+    def _build_tables_section(
+        self,
+    ) -> list[str]:
+        """
+        Build the tables section.
+        """
+
+        context = []
+
+        tables = self.metadata_service.get_tables()
+
+        context.append("TABLES")
         context.append("")
 
         for table in tables:
 
             context.append(
-                f"Table: {table.table_name}"
+                f"Table : {table.schema_name}.{table.table_name}"
             )
 
-            table_columns = [
+            if hasattr(table, "table_type"):
+                context.append(
+                    f"Type : {table.table_type}"
+                )
 
-                column
+            if hasattr(table, "row_count"):
+                context.append(
+                    f"Rows : {table.row_count}"
+                )
 
-                for column in columns
+            if hasattr(table, "is_fact_table"):
 
-                if column.table_name == table.table_name
-
-            ]
+                if table.is_fact_table:
+                    context.append(
+                        "Category : FACT TABLE"
+                    )
+                else:
+                    context.append(
+                        "Category : DIMENSION TABLE"
+                    )
 
             context.append("Columns:")
 
-            for column in table_columns:
+            columns = self.metadata_service.get_columns(
+                table.table_name
+            )
+
+            for column in columns:
 
                 flags = []
 
@@ -77,34 +108,68 @@ class SQLContextBuilder:
                 flag_text = ""
 
                 if flags:
+
                     flag_text = (
                         " ["
                         + ", ".join(flags)
                         + "]"
                     )
 
+                max_length = ""
+
+                if column.max_length is not None:
+
+                    max_length = (
+                        f"({column.max_length})"
+                    )
+
                 context.append(
-                    f"- {column.column_name} "
-                    f"({column.data_type})"
+                    f"  - {column.column_name}"
+                    f" : {column.data_type}"
+                    f"{max_length}"
                     f"{flag_text}"
                 )
 
             context.append("")
 
-        if relationships:
+        return context
 
-            context.append("RELATIONSHIPS")
+    def _build_relationships_section(
+        self,
+    ) -> list[str]:
+        """
+        Build the relationships section.
+        """
+
+        context = []
+
+        relationships = (
+            self.metadata_service.get_relationships()
+        )
+
+        context.append("=" * 80)
+        context.append("")
+        context.append("RELATIONSHIPS")
+        context.append("")
+
+        for relation in relationships:
+
+            if hasattr(relation, "constraint_name"):
+
+                context.append(
+                    f"Constraint : {relation.constraint_name}"
+                )
+
+            context.append(
+                f"{relation.source_table}.{relation.source_column}"
+            )
+
+            context.append("    ↓")
+
+            context.append(
+                f"{relation.target_table}.{relation.target_column}"
+            )
 
             context.append("")
 
-            for relation in relationships:
-
-                context.append(
-                    f"{relation.source_table}."
-                    f"{relation.source_column}"
-                    f" -> "
-                    f"{relation.target_table}."
-                    f"{relation.target_column}"
-                )
-
-        return "\n".join(context)
+        return context
