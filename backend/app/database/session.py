@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database.connection_immo_ai import engine_immo_ai
 from app.database.connection_ministry import engine_ministry
+import app.database.entities_loader
 
 
 SessionLocalImmoAI = sessionmaker(

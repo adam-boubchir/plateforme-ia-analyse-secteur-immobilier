@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from typing import Any
+
+from pydantic import BaseModel
 
 
 class SQLAgentResponse(BaseModel):
@@ -8,6 +9,8 @@ class SQLAgentResponse(BaseModel):
     """
 
     success: bool
+
+    conversation_uuid: str | None = None
 
     answer: str
 

@@ -1,14 +1,21 @@
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import uuid4
+
 from sqlalchemy import (
     BigInteger,
-    String,
     DateTime,
-    Text
+    String,
 )
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
 
 from .base import Base
-
 
 class Conversation(Base):
 
@@ -17,39 +24,44 @@ class Conversation(Base):
     id: Mapped[int] = mapped_column(
         BigInteger,
         primary_key=True,
-        autoincrement=True
+        autoincrement=True,
     )
 
-    conversation_id: Mapped[str] = mapped_column(
-        String(100)
+    conversation_uuid: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        default=lambda: str(uuid4()),
     )
 
-    request_id: Mapped[str] = mapped_column(
-        String(100)
+    title: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
 
     user_id: Mapped[str | None] = mapped_column(
         String(100),
-        nullable=True
-    )
-
-    agent_name: Mapped[str] = mapped_column(
-        String(100)
-    )
-
-    user_message: Mapped[str] = mapped_column(
-        Text
-    )
-
-    assistant_response: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True
+        nullable=True,
     )
 
     status: Mapped[str] = mapped_column(
-        String(20)
+        String(20),
+        default="ACTIVE",
     )
 
-    created_at: Mapped[str] = mapped_column(
-        DateTime
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+    )
+
+    last_message_at: Mapped[datetime] = mapped_column(
+        DateTime,
+    )
+
+    messages: Mapped[list["ConversationMessage"]] = relationship(
+        "ConversationMessage",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
     )
