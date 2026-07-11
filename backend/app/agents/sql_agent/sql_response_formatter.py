@@ -3,45 +3,32 @@ class SQLResponseFormatter:
     Format SQL query results into a human-readable response.
     """
 
-    MAX_ROWS = 100
-
     def format(
         self,
         rows: list[dict],
     ) -> str:
 
-        if not rows:
-
-            return "Aucun résultat trouvé."
-
         total = len(rows)
 
-        displayed_rows = rows[: self.MAX_ROWS]
+        if total == 0:
 
-        lines = []
-
-        lines.append(
-            f"{total} résultat(s) trouvé(s)."
-        )
-
-        lines.append("")
-
-        for index, row in enumerate(displayed_rows, start=1):
-
-            lines.append(f"Ligne {index}")
-
-            for key, value in row.items():
-
-                lines.append(
-                    f"  {key} : {value}"
-                )
-
-            lines.append("")
-
-        if total > self.MAX_ROWS:
-
-            lines.append(
-                f"... {total - self.MAX_ROWS} ligne(s) supplémentaire(s) non affichée(s)."
+            return (
+                "Aucune donnée ne correspond à votre demande."
             )
 
-        return "\n".join(lines)
+        if total == 1:
+
+            return (
+                "Votre requête a retourné un seul résultat. "
+                "Les informations détaillées sont disponibles dans le tableau ci-dessous."
+            )
+
+        return (
+            f"Votre requête a retourné **{total} résultats**.\n\n"
+            "Les données sont présentées dans le tableau ci-dessous.\n\n"
+            "Vous pouvez :\n"
+            "• consulter les indicateurs générés automatiquement ;\n"
+            "• explorer la visualisation lorsqu'elle est disponible ;\n"
+            "• rechercher, trier et filtrer les données ;\n"
+            "• exporter les résultats au format CSV."
+        )

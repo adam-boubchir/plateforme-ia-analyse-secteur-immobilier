@@ -84,8 +84,9 @@ class SQLValidator:
             raise SQLValidationError(
                 "Multiple SQL statements are not allowed."
             )
+        normalized_sql = " ".join(sql_upper.split())
 
-        if " FROM " not in sql_upper:
+        if not re.search(r"\bFROM\b", sql_upper):
             raise SQLValidationError(
                 "SQL query must contain a FROM clause."
             )

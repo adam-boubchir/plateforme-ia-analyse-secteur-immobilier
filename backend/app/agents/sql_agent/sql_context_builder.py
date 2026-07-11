@@ -32,6 +32,12 @@ class SQLContextBuilder:
             self._build_relationships_section()
         )
 
+        # ===== AJOUTE CES LIGNES =====
+        print("=" * 80)
+        print("\n".join(context))
+        print("=" * 80)
+        # =============================
+
         return "\n".join(context)
 
     def _build_header(
@@ -65,7 +71,7 @@ class SQLContextBuilder:
         for table in tables:
 
             context.append(
-                f"Table : {table.schema_name}.{table.table_name}"
+                f"Table : {table.table_name}"
             )
 
             if hasattr(table, "table_type"):

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CreateConversationRequest(BaseModel):
@@ -43,6 +43,8 @@ class ConversationMessageResponse(BaseModel):
     content: str
 
     generated_sql: str | None
+
+    rows: list[dict] | None = None
 
     rows_returned: int | None
 
@@ -105,3 +107,13 @@ class DeleteConversationResponse(BaseModel):
     """
 
     success: bool
+
+class UpdateConversationRequest(BaseModel):
+    """
+    Request used to rename a conversation.
+    """
+
+    title: str = Field(
+        min_length=1,
+        max_length=255,
+    )

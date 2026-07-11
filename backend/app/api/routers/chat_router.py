@@ -10,6 +10,7 @@ from app.api.models.chat_models import (
 
 from app.dependencies.database import (
     get_immo_db,
+    get_ministry_db,
 )
 
 from app.dependencies.chat import (
@@ -35,13 +36,17 @@ router = APIRouter(
 )
 def chat(
     request: ChatRequest,
-    db: Session = Depends(get_immo_db),
+    immo_db: Session = Depends(get_immo_db),
+    ministry_db: Session = Depends(get_ministry_db),
 ) -> ChatResponse:
     """
     Main chat endpoint.
     """
 
-    chat_service = get_chat_service(db)
+    chat_service = get_chat_service(
+        immo_db,
+        ministry_db,
+    )
 
     response = chat_service.chat(
 

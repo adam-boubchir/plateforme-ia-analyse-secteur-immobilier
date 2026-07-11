@@ -1,19 +1,84 @@
+import { useEffect, useState } from "react";
+
 import ConversationItem from "./ConversationItem";
+import SearchConversation from "./SearchConversation";
+
+import { useConversationStore } from "../../store/conversationStore";
 
 const ConversationList = () => {
-  return (
-    <div className="p-2">
 
-      <ConversationItem title="Prix appartement Rabat" />
-
-      <ConversationItem title="Evolution du ciment" />
-
-      <ConversationItem title="Prix terrain Casablanca" />
-
-      <ConversationItem title="Indice immobilier 2025" />
-
-    </div>
+  const conversations = useConversationStore(
+    state => state.conversations
   );
+
+  const loadConversations = useConversationStore(
+    state => state.loadConversations
+  );
+
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+
+    loadConversations();
+
+  }, []);
+
+  const filteredConversations = conversations.filter(
+
+    conversation =>
+
+      (conversation.title ?? "")
+
+        .toLowerCase()
+
+        .includes(
+
+          search.toLowerCase()
+
+        )
+
+  );
+
+  return (
+
+    <>
+
+      <SearchConversation
+
+        value={search}
+
+        onChange={setSearch}
+
+      />
+
+      <div className="p-2">
+
+        {
+
+          filteredConversations.map(
+
+            conversation => (
+
+              <ConversationItem
+
+                key={conversation.conversation_uuid}
+
+                conversation={conversation}
+
+              />
+
+            )
+
+          )
+
+        }
+
+      </div>
+
+    </>
+
+  );
+
 };
 
 export default ConversationList;

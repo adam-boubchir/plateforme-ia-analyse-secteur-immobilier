@@ -26,4 +26,10 @@ class SQLGenerator:
             prompt=prompt,
         )
 
+        print("\n" + "=" * 80)
+        print("RAW GPT RESPONSE")
+        print("=" * 80)
+        print(sql)
+        print("=" * 80 + "\n")
+
         return sql.strip()

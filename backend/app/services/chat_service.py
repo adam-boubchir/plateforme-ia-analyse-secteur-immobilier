@@ -43,9 +43,9 @@ class ChatService:
         """
 
         if conversation_uuid is None:
-
-            conversation = self.conversation_service.create()
-
+            conversation = self.conversation_service.create(
+                title="Nouvelle conversation"
+            )
         else:
 
             conversation = self.conversation_service.get_by_uuid(
@@ -80,6 +80,8 @@ class ChatService:
 
             rows_returned=len(response.rows),
 
+            rows=response.rows,
+
         )
 
         self.conversation_service.update_last_message(
@@ -88,15 +90,12 @@ class ChatService:
 
         if (
             conversation.title is None
-            and question.strip()
+            or conversation.title == "Nouvelle conversation"
         ):
 
             self.conversation_service.update_title(
-
                 conversation,
-
                 question.strip()[:60],
-
             )
 
         # On ajoute le conversation_uuid dans la réponse

@@ -18,24 +18,24 @@ from app.services.chat_service import (
 
 
 def get_chat_service(
-    db: Session,
+    immo_db: Session,
+    ministry_db: Session,
 ) -> ChatService:
     """
     Dependency returning the ChatService.
     """
 
-    sql_agent = get_sql_agent(db)
+    sql_agent = get_sql_agent(
+        immo_db,
+        ministry_db,
+    )
 
-    conversation_service = get_conversation_service(db)
+    conversation_service = get_conversation_service(immo_db)
 
-    message_service = get_conversation_message_service(db)
+    message_service = get_conversation_message_service(immo_db)
 
     return ChatService(
-
         sql_agent=sql_agent,
-
         conversation_service=conversation_service,
-
         message_service=message_service,
-
     )

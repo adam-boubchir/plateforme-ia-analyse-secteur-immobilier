@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import uuid4
+import json
 
 from sqlalchemy.orm import Session
 
@@ -55,6 +56,8 @@ class ConversationMessageService:
 
             created_at=datetime.utcnow(),
 
+            
+
         )
 
         self.repository.create(message)
@@ -72,6 +75,7 @@ class ConversationMessageService:
         generated_sql: str | None = None,
         execution_time_ms: int | None = None,
         rows_returned: int | None = None,
+        rows: list[dict] | None = None,
     ) -> ConversationMessage:
         """
         Add an assistant message.
@@ -88,6 +92,16 @@ class ConversationMessageService:
             content=content,
 
             generated_sql=generated_sql,
+
+            result_json=(
+                json.dumps(
+                    rows,
+                    ensure_ascii=False,
+                    default=str,
+                )
+                if rows is not None
+                else None
+            ),
 
             execution_time_ms=execution_time_ms,
 

@@ -50,6 +50,11 @@ class ConversationMessage(Base):
         nullable=True,
     )
 
+    result_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     execution_time_ms: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,

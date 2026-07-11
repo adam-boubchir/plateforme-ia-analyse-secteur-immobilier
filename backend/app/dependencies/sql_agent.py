@@ -30,21 +30,24 @@ from app.agents.sql_agent.sql_agent import (
 
 
 def get_sql_agent(
-    db: Session,
+    immo_db: Session,
+    ministry_db: Session,
 ) -> SQLAgent:
     """
     Dependency returning the SQLAgent.
     """
 
-    context_builder = get_sql_context_builder(db)
+    context_builder = get_sql_context_builder(immo_db)
 
     prompt_builder = PromptBuilder()
 
-    generator = get_sql_generator(db)
+    generator = get_sql_generator(immo_db)
 
     validator = SQLValidator()
 
-    executor = SQLExecutor(db)
+    # IMPORTANT :
+    # SQLExecutor doit utiliser la base du Ministère
+    executor = SQLExecutor(ministry_db)
 
     formatter = SQLResponseFormatter()
 

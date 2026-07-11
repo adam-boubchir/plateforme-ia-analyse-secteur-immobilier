@@ -138,3 +138,28 @@ class ConversationService:
         )
 
         self.db.commit()
+
+    def rename(
+        self,
+        conversation: Conversation,
+        title: str,
+    ) -> Conversation:
+        """
+        Rename a conversation.
+        """
+
+        conversation.title = title
+
+        conversation.updated_at = datetime.utcnow()
+
+        self.repository.update(
+            conversation
+        )
+
+        self.db.commit()
+
+        self.db.refresh(
+            conversation
+        )
+
+        return conversation

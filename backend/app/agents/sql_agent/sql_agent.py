@@ -58,7 +58,6 @@ class SQLAgent:
         self,
         question: str,
     ) -> SQLAgentResponse:
-
         context = self.context_builder.build_context()
 
         prompt = self.prompt_builder.build_prompt(
@@ -69,6 +68,30 @@ class SQLAgent:
         sql = self.generator.generate(
             prompt
         ).strip()
+
+        print("\n========== SQL BRUT ==========")
+        print(sql)
+        print("================================\n")
+
+        # Cas où le modèle ne peut pas générer de SQL
+        if sql == "CANNOT_GENERATE_SQL":
+
+            return SQLAgentResponse(
+
+                success=False,
+
+                answer=(
+                    "Je ne peux pas répondre à cette question avec les "
+                    "données actuellement disponibles dans la base."
+                ),
+
+                sql=None,
+
+                rows=[],
+
+                error="CANNOT_GENERATE_SQL",
+
+            )
 
         sql = self.validator.validate(
             sql
@@ -93,4 +116,5 @@ class SQLAgent:
             rows=rows,
 
             error=None,
+
         )
