@@ -1,9 +1,8 @@
 import { useState } from "react";
+import { ArrowUp } from "lucide-react";
 
 import { sendMessage } from "../../services/chatService";
-
 import { useChatStore } from "../../store/chatStore";
-
 import { useConversationStore } from "../../store/conversationStore";
 
 const ChatInput = () => {
@@ -11,33 +10,36 @@ const ChatInput = () => {
   const [question, setQuestion] = useState("");
 
   const addMessage = useChatStore(
-    (state) => state.addMessage
+    state => state.addMessage
   );
 
   const setLoading = useChatStore(
-    (state) => state.setLoading
+    state => state.setLoading
   );
 
   const isLoading = useChatStore(
-    (state) => state.isLoading
+    state => state.isLoading
   );
 
   const activeConversation = useConversationStore(
-    (state) => state.activeConversation
+    state => state.activeConversation
   );
 
   const setCurrentConversation = useConversationStore(
-    (state) => state.setCurrentConversation
+    state => state.setCurrentConversation
   );
 
   const loadConversations = useConversationStore(
-    (state) => state.loadConversations
+    state => state.loadConversations
   );
 
   const handleSend = async () => {
 
-    if (!question.trim() || isLoading)
+    if (!question.trim() || isLoading) {
+
       return;
+
+    }
 
     const userQuestion = question.trim();
 
@@ -45,7 +47,7 @@ const ChatInput = () => {
 
       role: "user",
 
-      content: userQuestion
+      content: userQuestion,
 
     });
 
@@ -60,7 +62,7 @@ const ChatInput = () => {
         question: userQuestion,
 
         conversation_uuid:
-          activeConversation?.conversation_uuid
+          activeConversation?.conversation_uuid,
 
       });
 
@@ -72,7 +74,7 @@ const ChatInput = () => {
 
         sql: response.sql,
 
-        rows: response.rows
+        rows: response.rows,
 
       });
 
@@ -97,7 +99,7 @@ const ChatInput = () => {
         role: "assistant",
 
         content:
-          "❌ Une erreur est survenue lors de la communication avec le serveur."
+          "❌ Une erreur est survenue lors de la communication avec le serveur.",
 
       });
 
@@ -113,68 +115,139 @@ const ChatInput = () => {
 
   return (
 
-    <div className="border-t border-gray-800 p-6">
+    <div
+      className="
+        border-t
+        border-white/10
+        bg-[#0f0f0f]
+        px-8
+        py-6
+      "
+    >
 
-      <div className="flex gap-3">
+      <div
+        className="
+          mx-auto
+          max-w-5xl
+        "
+      >
 
-        <input
+        <div
+          className="
+            flex
+            items-end
+            gap-3
+            rounded-3xl
+            border
+            border-white/10
+            bg-[#1b1b1b]
+            px-5
+            py-4
+            shadow-xl
+            transition-all
+            focus-within:border-blue-500
+            focus-within:shadow-blue-500/20
+          "
+        >
 
-          type="text"
+          <textarea
 
-          value={question}
+            rows={1}
 
-          disabled={isLoading}
+            value={question}
 
-          onChange={(e) =>
-            setQuestion(e.target.value)
-          }
+            disabled={isLoading}
 
-          onKeyDown={(e) => {
+            onChange={(e) =>
+              setQuestion(e.target.value)
+            }
 
-            if (e.key === "Enter") {
+            onKeyDown={(e) => {
 
-              handleSend();
+              if (
+
+                e.key === "Enter" &&
+
+                !e.shiftKey
+
+              ) {
+
+                e.preventDefault();
+
+                handleSend();
+
+              }
+
+            }}
+
+            placeholder="Posez une question sur les données immobilières..."
+
+            className="
+              flex-1
+              resize-none
+              bg-transparent
+              text-white
+              placeholder:text-gray-500
+              outline-none
+              max-h-40
+              leading-7
+            "
+
+          />
+
+          <button
+
+            onClick={handleSend}
+
+            disabled={
+              isLoading ||
+              question.trim() === ""
+            }
+
+            className="
+              h-11
+              w-11
+              rounded-full
+              bg-blue-600
+              hover:bg-blue-500
+              disabled:bg-[#333]
+              disabled:cursor-not-allowed
+              flex
+              items-center
+              justify-center
+              transition-all
+              shadow-lg
+              hover:scale-105
+            "
+
+          >
+
+            {
+
+              isLoading
+
+                ? "⏳"
+
+                : <ArrowUp size={18} />
 
             }
 
-          }}
+          </button>
 
-          placeholder="Posez votre question..."
+        </div>
 
+        <p
           className="
-            flex-1
-            rounded-xl
-            bg-[#2f2f2f]
-            px-5
-            py-4
-            outline-none
-            disabled:opacity-50
+            mt-3
+            text-center
+            text-xs
+            text-gray-500
           "
-
-        />
-
-        <button
-
-          onClick={handleSend}
-
-          disabled={isLoading}
-
-          className="
-            bg-blue-600
-            hover:bg-blue-700
-            rounded-xl
-            px-6
-            font-medium
-            transition-colors
-            disabled:opacity-50
-            disabled:cursor-not-allowed
-          "
-
         >
 
-          {isLoading ? "⏳" : "Envoyer"}
+          Habitat AI peut générer des réponses inexactes. Vérifiez les résultats importants.
 
-        </button>
+        </p>
 
       </div>
 

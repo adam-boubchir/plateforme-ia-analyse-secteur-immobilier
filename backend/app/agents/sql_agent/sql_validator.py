@@ -34,7 +34,7 @@ class SQLValidator:
         Validate a generated SQL query.
 
         Returns:
-            The cleaned SQL query.
+            Clean SQL query.
 
         Raises:
             SQLValidationError
@@ -57,35 +57,47 @@ class SQLValidator:
                 "The model could not generate SQL."
             )
 
+        # Remove trailing semicolon
+        sql = sql.rstrip()
+
+        if sql.endswith(";"):
+            sql = sql[:-1].rstrip()
+
         sql_upper = sql.upper()
 
-        if not sql_upper.startswith("SELECT"):
+        # Only SELECT queries or CTEs beginning with WITH are allowed
+        if not (
+            sql_upper.startswith("SELECT")
+            or sql_upper.startswith("WITH")
+        ):
             raise SQLValidationError(
                 "Only SELECT statements are allowed."
             )
 
+        # Reject dangerous keywords
         for keyword in self.FORBIDDEN_KEYWORDS:
 
             if re.search(
                 rf"\b{keyword}\b",
                 sql_upper,
             ):
-
                 raise SQLValidationError(
                     f"Forbidden SQL keyword detected: {keyword}"
                 )
 
-        sql_without_semicolon = sql.rstrip()
-
-        if sql_without_semicolon.endswith(";"):
-            sql_without_semicolon = sql_without_semicolon[:-1]
-
-        if ";" in sql_without_semicolon:
+        # Prevent multiple SQL statements
+        if ";" in sql:
             raise SQLValidationError(
                 "Multiple SQL statements are not allowed."
             )
-        normalized_sql = " ".join(sql_upper.split())
 
+        # A valid SELECT/CTE must eventually contain SELECT
+        if not re.search(r"\bSELECT\b", sql_upper):
+            raise SQLValidationError(
+                "Missing SELECT statement."
+            )
+
+        # It must also contain FROM
         if not re.search(r"\bFROM\b", sql_upper):
             raise SQLValidationError(
                 "SQL query must contain a FROM clause."

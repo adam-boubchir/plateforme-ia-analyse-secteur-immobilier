@@ -1,4 +1,4 @@
-from app.agents.sql_agent.sql_context_builder import (
+from app.agents.sql_agent.context_engine.sql_context_builder import (
     SQLContextBuilder,
 )
 
@@ -58,22 +58,67 @@ class SQLAgent:
         self,
         question: str,
     ) -> SQLAgentResponse:
-        context = self.context_builder.build_context()
+        """
+        Execute the complete SQL Agent pipeline.
+        """
+
+        # ------------------------------------------------------------------
+        # Build Context
+        # ------------------------------------------------------------------
+
+        context = self.context_builder.build_context(
+            question
+        )
+
+        # ------------------------------------------------------------------
+        # Build Prompt
+        # ------------------------------------------------------------------
 
         prompt = self.prompt_builder.build_prompt(
             question=question,
             context=context,
         )
 
+        # ------------------------------------------------------------------
+        # Generate SQL
+        # ------------------------------------------------------------------
+
         sql = self.generator.generate(
             prompt
         ).strip()
 
-        print("\n========== SQL BRUT ==========")
+        print("\n" + "=" * 100)
+        print("GENERATED SQL")
+        print("=" * 100)
         print(sql)
-        print("================================\n")
+        print("=" * 100 + "\n")
 
-        # Cas où le modèle ne peut pas générer de SQL
+        # ------------------------------------------------------------------
+        # Empty response
+        # ------------------------------------------------------------------
+
+        if not sql:
+
+            return SQLAgentResponse(
+
+                success=False,
+
+                answer=(
+                    "Le modèle n'a pas réussi à générer une requête SQL."
+                ),
+
+                sql=None,
+
+                rows=[],
+
+                error="EMPTY_SQL",
+
+            )
+
+        # ------------------------------------------------------------------
+        # Database cannot answer
+        # ------------------------------------------------------------------
+
         if sql == "CANNOT_GENERATE_SQL":
 
             return SQLAgentResponse(
@@ -81,8 +126,7 @@ class SQLAgent:
                 success=False,
 
                 answer=(
-                    "Je ne peux pas répondre à cette question avec les "
-                    "données actuellement disponibles dans la base."
+                    "Je ne peux pas répondre à cette question avec les données actuellement disponibles dans la base."
                 ),
 
                 sql=None,
@@ -93,13 +137,25 @@ class SQLAgent:
 
             )
 
+        # ------------------------------------------------------------------
+        # Validate SQL
+        # ------------------------------------------------------------------
+
         sql = self.validator.validate(
             sql
         )
 
+        # ------------------------------------------------------------------
+        # Execute SQL
+        # ------------------------------------------------------------------
+
         rows = self.executor.execute(
             sql
         )
+
+        # ------------------------------------------------------------------
+        # Format Answer
+        # ------------------------------------------------------------------
 
         answer = self.formatter.format(
             rows

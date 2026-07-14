@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  MessageSquare,
+} from "lucide-react";
 
 import type { Conversation } from "../../types/conversation";
-
 import { useConversationStore } from "../../store/conversationStore";
-
 
 type Props = {
   conversation: Conversation;
@@ -13,392 +16,412 @@ type Props = {
 const ConversationItem = ({ conversation }: Props) => {
 
   const activeConversation = useConversationStore(
-  state => state.activeConversation
-);
-
-const removeConversation = useConversationStore(
-  state => state.removeConversation
-);
-
-const renameConversation = useConversationStore(
-  state => state.renameConversation
-);
-
-const openedMenuConversationUuid = useConversationStore(
-  state => state.openedMenuConversationUuid
-);
-
-const setOpenedMenu = useConversationStore(
-  state => state.setOpenedMenu
-);
-
-const selectConversation = useConversationStore(
-  state => state.selectConversation
-);
-
-const [isEditing, setIsEditing] = useState(false);
-
-const [title, setTitle] = useState(
-  conversation.title ?? ""
-);
-
-const inputRef = useRef<HTMLInputElement>(null);
-
-const menuRef = useRef<HTMLDivElement>(null);
-
-const menuOpen =
-  openedMenuConversationUuid ===
-  conversation.conversation_uuid;
-
-const isActive =
-  activeConversation?.conversation_uuid ===
-  conversation.conversation_uuid;
-
-useEffect(() => {
-
-  if (isEditing) {
-
-    inputRef.current?.focus();
-
-    inputRef.current?.select();
-
-  }
-
-}, [isEditing]);
-
-const handleClick = async () => {
-
-  setOpenedMenu(null);
-
-  await selectConversation(
-    conversation.conversation_uuid
+    state => state.activeConversation
   );
 
-};
-const handleDelete = async (
-  e: React.MouseEvent
-) => {
-
-  e.stopPropagation();
-
-  if (
-
-    !window.confirm(
-      "Voulez-vous vraiment supprimer cette conversation ?"
-    )
-
-  ) {
-
-    return;
-
-  }
-
-  await removeConversation(
-    conversation.conversation_uuid
+  const removeConversation = useConversationStore(
+    state => state.removeConversation
   );
 
-};
-
-const saveTitle = async () => {
-
-  const newTitle = title.trim();
-
-  setIsEditing(false);
-
-  setOpenedMenu(null);
-
-  if (
-
-    newTitle === "" ||
-
-    newTitle === conversation.title
-
-  ) {
-
-    setTitle(
-      conversation.title ?? ""
-    );
-
-    return;
-
-  }
-
-  await renameConversation(
-
-    conversation.conversation_uuid,
-
-    newTitle
-
+  const renameConversation = useConversationStore(
+    state => state.renameConversation
   );
 
-};
+  const openedMenuConversationUuid = useConversationStore(
+    state => state.openedMenuConversationUuid
+  );
 
-useEffect(() => {
+  const setOpenedMenu = useConversationStore(
+    state => state.setOpenedMenu
+  );
 
-  const handleClickOutside = (
+  const selectConversation = useConversationStore(
+    state => state.selectConversation
+  );
 
-    event: MouseEvent
+  const [isEditing, setIsEditing] = useState(false);
 
-  ) => {
+  const [title, setTitle] = useState(
+    conversation.title ?? ""
+  );
 
-    if (
+  const inputRef = useRef<HTMLInputElement>(null);
 
-      menuRef.current &&
+  const menuRef = useRef<HTMLDivElement>(null);
 
-      !menuRef.current.contains(
+  const menuOpen =
+    openedMenuConversationUuid ===
+    conversation.conversation_uuid;
 
-        event.target as Node
+  const isActive =
+    activeConversation?.conversation_uuid ===
+    conversation.conversation_uuid;
 
-      )
+  useEffect(() => {
 
-    ) {
+    if (isEditing) {
 
-      setOpenedMenu(null);
+      inputRef.current?.focus();
+
+      inputRef.current?.select();
 
     }
 
-  };
+  }, [isEditing]);
 
-  document.addEventListener(
+  const handleClick = async () => {
 
-    "click",
+    setOpenedMenu(null);
 
-    handleClickOutside
-
-  );
-
-  return () => {
-
-    document.removeEventListener(
-
-      "click",
-
-      handleClickOutside
-
+    await selectConversation(
+      conversation.conversation_uuid
     );
 
   };
 
-}, [setOpenedMenu]);
+  const handleDelete = async (
+    e: React.MouseEvent
+  ) => {
+
+    e.stopPropagation();
+
+    if (
+      !window.confirm(
+        "Voulez-vous vraiment supprimer cette conversation ?"
+      )
+    ) {
+      return;
+    }
+
+    await removeConversation(
+      conversation.conversation_uuid
+    );
+
+  };
+
+  const saveTitle = async () => {
+
+    const newTitle = title.trim();
+
+    setIsEditing(false);
+
+    setOpenedMenu(null);
+
+    if (
+      newTitle === "" ||
+      newTitle === conversation.title
+    ) {
+
+      setTitle(
+        conversation.title ?? ""
+      );
+
+      return;
+
+    }
+
+    await renameConversation(
+      conversation.conversation_uuid,
+      newTitle
+    );
+
+  };
+
+  useEffect(() => {
+
+    const handleClickOutside = (
+      event: MouseEvent
+    ) => {
+
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(
+          event.target as Node
+        )
+      ) {
+
+        setOpenedMenu(null);
+
+      }
+
+    };
+
+    document.addEventListener(
+      "click",
+      handleClickOutside
+    );
+
+    return () => {
+
+      document.removeEventListener(
+        "click",
+        handleClickOutside
+      );
+
+    };
+
+  }, [setOpenedMenu]);
 
   return (
 
-  <div ref={menuRef} className="relative group mb-1">
+    <div
+      ref={menuRef}
+      className="relative group px-2 py-1"
+    >
 
-    {
+      {
 
-      isEditing ? (
+        isEditing ? (
 
-        <input
+          <input
 
-          ref={inputRef}
+            ref={inputRef}
 
-          value={title}
+            value={title}
 
-          onChange={(e) =>
-            setTitle(e.target.value)
-          }
-
-          onBlur={saveTitle}
-
-          onKeyDown={(e) => {
-
-            if (e.key === "Enter") {
-
-              saveTitle();
-
+            onChange={(e) =>
+              setTitle(e.target.value)
             }
 
-            if (e.key === "Escape") {
+            onBlur={saveTitle}
 
-              setTitle(
-                conversation.title ?? ""
-              );
+            onKeyDown={(e) => {
 
-              setIsEditing(false);
+              if (e.key === "Enter") {
 
-              setOpenedMenu(null);
+                saveTitle();
 
-            }
+              }
 
-          }}
+              if (e.key === "Escape") {
 
-          className="
-            w-full
-            rounded-lg
-            bg-[#2f2f2f]
-            p-3
-            outline-none
-            border
-            border-blue-500
-          "
+                setTitle(
+                  conversation.title ?? ""
+                );
 
-        />
+                setIsEditing(false);
 
-      ) : (
+                setOpenedMenu(null);
 
-        <button
-
-          onClick={handleClick}
-
-          className={`
-            w-full
-            text-left
-            rounded-lg
-            p-3
-            pr-10
-            truncate
-            transition
-            ${
-              isActive
-                ? "bg-blue-600"
-                : "hover:bg-[#2f2f2f]"
-            }
-          `}
-
-        >
-
-          {
-
-            conversation.title ??
-
-            "Nouvelle conversation"
-
-          }
-
-        </button>
-
-      )
-
-    }
-
-    {
-
-      !isEditing && (
-
-        <button
-
-          onClick={(e) => {
-
-            e.stopPropagation();
-
-            if (menuOpen) {
-
-              setOpenedMenu(null);
-
-            }
-
-            else {
-
-              setOpenedMenu(
-                conversation.conversation_uuid
-              );
-
-            }
-
-          }}
-
-          className="
-            absolute
-            right-2
-            top-1/2
-            -translate-y-1/2
-            opacity-0
-            group-hover:opacity-100
-            transition
-          "
-
-        >
-
-          <MoreHorizontal size={18} />
-
-        </button>
-
-      )
-
-    }
-
-    {
-
-      menuOpen && (
-
-        <div
-          className="
-            absolute
-            right-0
-            mt-1
-            w-44
-            rounded-lg
-            border
-            border-gray-700
-            bg-[#252525]
-            shadow-xl
-            z-50
-          "
-        >
-
-          <button
-
-            onClick={() => {
-
-              setTitle(
-                conversation.title ?? ""
-              );
-
-              setIsEditing(true);
+              }
 
             }}
 
             className="
-              flex
-              items-center
-              gap-2
               w-full
+              rounded-2xl
+              border
+              border-blue-500
+              bg-[#1d1d1d]
               px-4
-              py-2
-              hover:bg-[#333]
+              py-3
+              outline-none
+              focus:ring-2
+              focus:ring-blue-500/40
             "
 
-          >
+          />
 
-            <Pencil size={16} />
-
-            Renommer
-
-          </button>
+        ) : (
 
           <button
 
-            onClick={handleDelete}
+            onClick={handleClick}
 
-            className="
+            className={`
+              w-full
               flex
               items-center
-              gap-2
-              w-full
+              gap-3
+              rounded-2xl
               px-4
-              py-2
-              text-red-400
-              hover:bg-[#333]
+              py-3
+              pr-12
+              transition-all
+              duration-200
+              border
+              ${
+                isActive
+                  ? `
+                    bg-gradient-to-r
+                    from-blue-600
+                    to-cyan-600
+                    border-blue-500
+                    shadow-xl
+                    shadow-blue-600/20
+                  `
+                  : `
+                    border-transparent
+                    hover:bg-[#202020]
+                  `
+              }
+            `}
+
+          >
+
+            <MessageSquare
+              size={18}
+              className={
+                isActive
+                  ? "text-white"
+                  : "text-gray-400"
+              }
+            />
+
+            <div className="truncate font-medium flex-1">
+
+              {
+
+                conversation.title ??
+
+                "Nouvelle conversation"
+
+              }
+
+            </div>
+
+          </button>
+
+        )
+
+      }
+
+      {
+
+        !isEditing && (
+
+          <button
+
+            onClick={(e) => {
+
+              e.stopPropagation();
+
+              if (menuOpen) {
+
+                setOpenedMenu(null);
+
+              }
+
+              else {
+
+                setOpenedMenu(
+                  conversation.conversation_uuid
+                );
+
+              }
+
+            }}
+
+            className="
+              absolute
+              right-4
+              top-1/2
+              -translate-y-1/2
+              rounded-lg
+              p-1.5
+              opacity-0
+              group-hover:opacity-100
+              hover:bg-white/10
+              transition-all
             "
 
           >
 
-            <Trash2 size={16} />
-
-            Supprimer
+            <MoreHorizontal
+              size={18}
+              className="text-gray-400"
+            />
 
           </button>
 
-        </div>
+        )
 
-      )
+      }
 
-    }
+      {
 
-  </div>
+        menuOpen && (
 
-);
+          <div
+            className="
+              absolute
+              right-2
+              top-full
+              mt-2
+              w-52
+              rounded-2xl
+              overflow-hidden
+              border
+              border-white/10
+              bg-[#181818]
+              shadow-2xl
+              z-50
+            "
+          >
+
+            <button
+
+              onClick={() => {
+
+                setTitle(
+                  conversation.title ?? ""
+                );
+
+                setIsEditing(true);
+
+              }}
+
+              className="
+                flex
+                items-center
+                gap-3
+                w-full
+                px-4
+                py-3
+                hover:bg-[#242424]
+              "
+
+            >
+
+              <Pencil size={17}/>
+
+              Renommer
+
+            </button>
+
+            <button
+
+              onClick={handleDelete}
+
+              className="
+                flex
+                items-center
+                gap-3
+                w-full
+                px-4
+                py-3
+                text-red-400
+                hover:bg-red-500/10
+              "
+
+            >
+
+              <Trash2 size={17}/>
+
+              Supprimer
+
+            </button>
+
+          </div>
+
+        )
+
+      }
+
+    </div>
+
+  );
+
 };
 
 export default ConversationItem;

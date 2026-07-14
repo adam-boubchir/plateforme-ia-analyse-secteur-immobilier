@@ -1,25 +1,55 @@
+import { useEffect, useRef } from "react";
+
 import { useChatStore } from "../../store/chatStore";
 import MessageBubble from "./MessageBubble";
 
 const ChatMessages = () => {
 
   const messages = useChatStore(
-    (state) => state.messages
+    state => state.messages
   );
 
   const isLoading = useChatStore(
-    (state) => state.isLoading
+    state => state.isLoading
   );
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+
+    bottomRef.current?.scrollIntoView({
+
+      behavior: "smooth",
+
+    });
+
+  }, [messages, isLoading]);
 
   return (
 
-    <div className="flex-1 overflow-y-auto p-8 space-y-6">
+    <div
+      className="
+        flex-1
+        overflow-y-auto
+        overflow-x-hidden
+        px-10
+        py-10
+      "
+    >
 
-      {
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-5xl
+          space-y-16
+          animate-[fadeIn_.25s_ease]
+        "
+      >
 
-        messages.map(
+        {
 
-          (message) => (
+          messages.map(message => (
 
             <MessageBubble
 
@@ -35,27 +65,29 @@ const ChatMessages = () => {
 
             />
 
+          ))
+
+        }
+
+        {
+
+          isLoading && (
+
+            <MessageBubble
+
+              role="assistant"
+
+              content="⏳ L'assistant réfléchit..."
+
+            />
+
           )
 
-        )
+        }
 
-      }
+        <div ref={bottomRef} />
 
-      {
-
-        isLoading && (
-
-          <MessageBubble
-
-            role="assistant"
-
-            content="⏳ L'assistant réfléchit..."
-
-          />
-
-        )
-
-      }
+      </div>
 
     </div>
 

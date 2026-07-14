@@ -6,11 +6,43 @@ const ChatPage = () => {
 
   return (
 
-    <main className="flex-1 flex flex-col h-screen">
+    <main
+      className="
+        flex
+        flex-1
+        flex-col
+        h-screen
+        bg-[#0f0f0f]
+        overflow-hidden
+      "
+    >
 
       <ChatHeader />
 
-      <ChatMessages />
+      <div
+        className="
+          flex-1
+          overflow-hidden
+          flex
+          justify-center
+        "
+      >
+
+        <div
+          className="
+            w-full
+            max-w-7xl
+            flex
+            flex-col
+            overflow-hidden
+          "
+        >
+
+          <ChatMessages />
+
+        </div>
+
+      </div>
 
       <ChatInput />
 

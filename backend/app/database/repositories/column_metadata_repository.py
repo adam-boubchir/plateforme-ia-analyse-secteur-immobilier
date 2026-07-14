@@ -1,6 +1,6 @@
 from app.database.entities.column_metadata import ColumnMetadataEntity
 from app.database.repositories.base_repository import BaseRepository
-
+from datetime import datetime
 
 class ColumnMetadataRepository(BaseRepository):
     """
@@ -62,3 +62,49 @@ class ColumnMetadataRepository(BaseRepository):
         self.db.query(
             ColumnMetadataEntity
         ).delete()
+
+    def update_profile(
+        self,
+        column_id: int,
+        semantic_type: str | None,
+        example_values: str | None,
+        min_value,
+        max_value,
+        distinct_count: int,
+    ) -> None:
+        """
+        Update semantic information of one column.
+        """
+
+        column = (
+            self.db.query(ColumnMetadataEntity)
+            .filter(
+                ColumnMetadataEntity.id == column_id
+            )
+            .first()
+        )
+
+        if column is None:
+            return
+
+        column.semantic_type = semantic_type
+
+        column.example_values = example_values
+
+        column.min_value = (
+            None
+            if min_value is None
+            else str(min_value)
+        )
+
+        column.max_value = (
+            None
+            if max_value is None
+            else str(max_value)
+        )
+
+        column.distinct_count = distinct_count
+
+        column.last_profiled = datetime.now()
+
+        self.commit()

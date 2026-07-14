@@ -94,6 +94,41 @@ class ColumnMetadataEntity(Base):
         nullable=True
     )
 
+    semantic_type: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+
+    example_values: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    min_value: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
+    max_value: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
+    distinct_count: Mapped[int | None] = mapped_column(
+        BigInteger,
+        nullable=True
+    )
+
+    is_searchable: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
+
+    last_profiled: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now()

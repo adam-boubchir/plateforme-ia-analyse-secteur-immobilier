@@ -1,34 +1,27 @@
+import {
+  MessageSquarePlus,
+  Building2,
+  Sparkles,
+} from "lucide-react";
+
 import { useChatStore } from "../../store/chatStore";
 import { useConversationStore } from "../../store/conversationStore";
 
 const SidebarHeader = () => {
 
-  const createNewConversation = useConversationStore(
-    state => state.createNewConversation
-  );
+  const createNewConversation =
+    useConversationStore(
+      state => state.createNewConversation
+    );
 
-  const clearMessages = useChatStore(
-    state => state.clearMessages
-  );
+  const clearMessages =
+    useChatStore(
+      state => state.clearMessages
+    );
 
   const handleNewChat = async () => {
 
     await createNewConversation();
-
-    const activeConversation =
-      useConversationStore.getState().activeConversation;
-
-    if (activeConversation) {
-
-      localStorage.setItem(
-
-        "activeConversationUuid",
-
-        activeConversation.conversation_uuid
-
-      );
-
-    }
 
     clearMessages();
 
@@ -36,7 +29,57 @@ const SidebarHeader = () => {
 
   return (
 
-    <div className="p-4 border-b border-gray-800">
+    <div className="px-6 pt-7 pb-6 border-b border-white/10">
+
+      <div className="flex items-center gap-4 mb-7">
+
+        <div
+          className="
+            h-14
+            w-14
+            rounded-2xl
+            bg-gradient-to-br
+            from-blue-600
+            via-cyan-500
+            to-blue-700
+            flex
+            items-center
+            justify-center
+            shadow-xl
+            shadow-blue-600/30
+          "
+        >
+
+          <Building2 size={28}/>
+
+        </div>
+
+        <div>
+
+          <div className="flex items-center gap-2">
+
+            <h1 className="font-bold text-xl">
+
+              Habitat AI
+
+            </h1>
+
+            <Sparkles
+              size={16}
+              className="text-cyan-400"
+            />
+
+          </div>
+
+          <p className="text-xs text-gray-400 mt-1">
+
+            Assistant immobilier intelligent
+
+          </p>
+
+        </div>
+
+      </div>
 
       <button
 
@@ -44,16 +87,28 @@ const SidebarHeader = () => {
 
         className="
           w-full
-          rounded-lg
-          bg-[#2f2f2f]
-          hover:bg-[#3b3b3b]
-          py-3
-          transition
+          rounded-2xl
+          bg-gradient-to-r
+          from-blue-600
+          to-cyan-600
+          hover:brightness-110
+          transition-all
+          duration-200
+          py-3.5
+          flex
+          items-center
+          justify-center
+          gap-3
+          font-medium
+          shadow-xl
+          shadow-blue-600/20
         "
 
       >
 
-        + Nouveau chat
+        <MessageSquarePlus size={20}/>
+
+        Nouvelle conversation
 
       </button>
 

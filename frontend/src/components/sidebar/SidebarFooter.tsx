@@ -1,21 +1,40 @@
+import {
+  Settings,
+} from "lucide-react";
+
 const SidebarFooter = () => {
+
   return (
-    <div className="border-t border-gray-800 p-4">
+
+    <div className="border-t border-white/10 p-4">
 
       <button
+
         className="
           w-full
-          rounded-lg
-          bg-[#2f2f2f]
-          hover:bg-[#3b3b3b]
+          rounded-xl
+          px-4
           py-3
+          flex
+          items-center
+          gap-3
+          text-gray-300
+          hover:bg-[#252525]
+          transition-all
         "
+
       >
-        ⚙ Paramètres
+
+        <Settings size={18} />
+
+        Paramètres
+
       </button>
 
     </div>
+
   );
+
 };
 
 export default SidebarFooter;

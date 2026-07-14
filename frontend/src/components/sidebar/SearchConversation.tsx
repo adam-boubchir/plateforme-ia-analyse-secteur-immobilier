@@ -18,15 +18,22 @@ const SearchConversation = ({
 
   return (
 
-    <div className="p-3 border-b border-gray-800">
+    <div className="px-4 py-4">
 
       <div className="relative">
 
         <Search
 
-          size={16}
+          size={18}
 
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          className="
+            absolute
+            left-4
+            top-1/2
+            -translate-y-1/2
+            text-gray-500
+            pointer-events-none
+          "
 
         />
 
@@ -36,16 +43,27 @@ const SearchConversation = ({
 
           onChange={(e) => onChange(e.target.value)}
 
-          placeholder="Rechercher..."
+          placeholder="Rechercher une conversation..."
 
           className="
             w-full
-            rounded-lg
-            bg-[#2b2b2b]
-            py-2
-            pl-10
-            pr-3
+            rounded-xl
+            bg-[#232323]
+            border
+            border-white/5
+            py-3
+            pl-11
+            pr-4
+            text-sm
+            text-white
+            placeholder:text-gray-500
             outline-none
+            transition-all
+            duration-200
+            focus:bg-[#2b2b2b]
+            focus:border-blue-500
+            focus:ring-2
+            focus:ring-blue-500/20
           "
 
         />
