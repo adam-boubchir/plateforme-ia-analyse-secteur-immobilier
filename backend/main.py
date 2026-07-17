@@ -1,22 +1,26 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers.chat_router import (
     router as chat_router,
-)
-
-from app.api.routers.health_router import (
-    router as health_router,
 )
 
 from app.api.routers.conversation_router import (
     router as conversation_router,
 )
 
+from app.api.routers.health_router import (
+    router as health_router,
+)
+
+from app.api.routers.logs_router import (
+    router as logs_router,
+)
+
 from app.core.exceptions import (
     register_exception_handlers,
 )
 
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
 
@@ -26,9 +30,17 @@ app = FastAPI(
 
 )
 
+# ==========================================================
+# Exception Handlers
+# ==========================================================
+
 register_exception_handlers(
     app
 )
+
+# ==========================================================
+# CORS
+# ==========================================================
 
 app.add_middleware(
 
@@ -54,6 +66,10 @@ app.add_middleware(
 
 )
 
+# ==========================================================
+# API Routers
+# ==========================================================
+
 app.include_router(
 
     health_router
@@ -69,5 +85,11 @@ app.include_router(
 app.include_router(
 
     chat_router
+
+)
+
+app.include_router(
+
+    logs_router
 
 )

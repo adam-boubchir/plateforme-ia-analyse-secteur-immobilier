@@ -25,7 +25,13 @@ class ConversationMessageService:
 
         self.db = db
 
-        self.repository = ConversationMessageRepository(db)
+        self.repository = ConversationMessageRepository(
+            db
+        )
+
+    # ==========================================================
+    # CREATE
+    # ==========================================================
 
     def add_user_message(
         self,
@@ -36,37 +42,15 @@ class ConversationMessageService:
         Add a user message.
         """
 
-        message = ConversationMessage(
+        return self._create_message(
 
             conversation_id=conversation_id,
-
-            request_id=str(uuid4()),
 
             role="USER",
 
             content=content,
 
-            generated_sql=None,
-
-            execution_time_ms=None,
-
-            rows_returned=None,
-
-            status="COMPLETED",
-
-            created_at=datetime.utcnow(),
-
-            
-
         )
-
-        self.repository.create(message)
-
-        self.db.commit()
-
-        self.db.refresh(message)
-
-        return message
 
     def add_assistant_message(
         self,
@@ -81,11 +65,9 @@ class ConversationMessageService:
         Add an assistant message.
         """
 
-        message = ConversationMessage(
+        return self._create_message(
 
             conversation_id=conversation_id,
-
-            request_id=str(uuid4()),
 
             role="ASSISTANT",
 
@@ -93,40 +75,24 @@ class ConversationMessageService:
 
             generated_sql=generated_sql,
 
-            result_json=(
-                json.dumps(
-                    rows,
-                    ensure_ascii=False,
-                    default=str,
-                )
-                if rows is not None
-                else None
-            ),
-
             execution_time_ms=execution_time_ms,
 
             rows_returned=rows_returned,
 
-            status="COMPLETED",
-
-            created_at=datetime.utcnow(),
+            rows=rows,
 
         )
 
-        self.repository.create(message)
-
-        self.db.commit()
-
-        self.db.refresh(message)
-
-        return message
+    # ==========================================================
+    # READ
+    # ==========================================================
 
     def get_messages(
         self,
         conversation_id: int,
     ) -> list[ConversationMessage]:
         """
-        Return all messages of a conversation.
+        Return all messages of one conversation.
         """
 
         return self.repository.get_by_conversation(
@@ -145,6 +111,10 @@ class ConversationMessageService:
             conversation_id
         )
 
+    # ==========================================================
+    # DELETE
+    # ==========================================================
+
     def delete_message(
         self,
         message: ConversationMessage,
@@ -153,6 +123,80 @@ class ConversationMessageService:
         Delete one message.
         """
 
-        self.repository.delete(message)
+        self.repository.delete(
+            message
+        )
 
         self.db.commit()
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _create_message(
+        self,
+        conversation_id: int,
+        role: str,
+        content: str,
+        generated_sql: str | None = None,
+        execution_time_ms: int | None = None,
+        rows_returned: int | None = None,
+        rows: list[dict] | None = None,
+    ) -> ConversationMessage:
+        """
+        Create and persist one message.
+        """
+
+        message = ConversationMessage(
+
+            conversation_id=conversation_id,
+
+            request_id=str(
+                uuid4()
+            ),
+
+            role=role,
+
+            content=content,
+
+            generated_sql=generated_sql,
+
+            result_json=(
+
+                json.dumps(
+
+                    rows,
+
+                    ensure_ascii=False,
+
+                    default=str,
+
+                )
+
+                if rows is not None
+
+                else None
+
+            ),
+
+            execution_time_ms=execution_time_ms,
+
+            rows_returned=rows_returned,
+
+            status="COMPLETED",
+
+            created_at=datetime.utcnow(),
+
+        )
+
+        self.repository.create(
+            message
+        )
+
+        self.db.commit()
+
+        self.db.refresh(
+            message
+        )
+
+        return message

@@ -4,10 +4,12 @@ import {
   Pencil,
   Trash2,
   MessageSquare,
+  FileText,
 } from "lucide-react";
 
 import type { Conversation } from "../../types/conversation";
 import { useConversationStore } from "../../store/conversationStore";
+import { useNavigate } from "react-router-dom";
 
 type Props = {
   conversation: Conversation;
@@ -49,6 +51,8 @@ const ConversationItem = ({ conversation }: Props) => {
 
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const navigate = useNavigate();
+
   const menuOpen =
     openedMenuConversationUuid ===
     conversation.conversation_uuid;
@@ -74,10 +78,12 @@ const ConversationItem = ({ conversation }: Props) => {
     setOpenedMenu(null);
 
     await selectConversation(
-      conversation.conversation_uuid
+        conversation.conversation_uuid
     );
 
-  };
+    navigate("/chat");
+
+};
 
   const handleDelete = async (
     e: React.MouseEvent
@@ -388,6 +394,40 @@ const ConversationItem = ({ conversation }: Props) => {
               Renommer
 
             </button>
+
+            <button
+
+    onClick={(e) => {
+
+        e.stopPropagation();
+
+        setOpenedMenu(null);
+
+        navigate(
+
+            `/conversations/${conversation.conversation_uuid}/logs`
+
+        );
+
+    }}
+
+    className="
+        flex
+        items-center
+        gap-3
+        w-full
+        px-4
+        py-3
+        hover:bg-[#242424]
+    "
+
+>
+
+    <FileText size={17} />
+
+    Execution Logs
+
+</button>
 
             <button
 

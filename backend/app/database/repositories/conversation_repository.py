@@ -22,27 +22,43 @@ class ConversationRepository(BaseRepository):
 
         super().__init__(db)
 
+    # ==========================================================
+    # CREATE
+    # ==========================================================
+
     def create(
         self,
         conversation: Conversation,
     ) -> Conversation:
+        """
+        Persist a new conversation.
+        """
 
-        self.add(conversation)
+        self.add(
+            conversation
+        )
 
         self.flush()
 
         return conversation
 
+    # ==========================================================
+    # READ
+    # ==========================================================
+
     def get_by_id(
         self,
         conversation_id: int,
     ) -> Conversation | None:
+        """
+        Retrieve a conversation by its ID.
+        """
 
         return self.db.scalar(
 
-            select(Conversation)
-
-            .where(
+            select(
+                Conversation
+            ).where(
                 Conversation.id == conversation_id
             )
 
@@ -52,12 +68,15 @@ class ConversationRepository(BaseRepository):
         self,
         conversation_uuid: str,
     ) -> Conversation | None:
+        """
+        Retrieve a conversation by its UUID.
+        """
 
         return self.db.scalar(
 
-            select(Conversation)
-
-            .where(
+            select(
+                Conversation
+            ).where(
                 Conversation.conversation_uuid
                 == conversation_uuid
             )
@@ -67,14 +86,17 @@ class ConversationRepository(BaseRepository):
     def get_all(
         self,
     ) -> list[Conversation]:
+        """
+        Retrieve every conversation ordered by last activity.
+        """
 
         return list(
 
             self.db.scalars(
 
-                select(Conversation)
-
-                .order_by(
+                select(
+                    Conversation
+                ).order_by(
                     Conversation.last_message_at.desc()
                 )
 
@@ -82,18 +104,34 @@ class ConversationRepository(BaseRepository):
 
         )
 
+    # ==========================================================
+    # UPDATE
+    # ==========================================================
+
     def update(
         self,
         conversation: Conversation,
     ) -> Conversation:
+        """
+        Flush pending changes.
+        """
 
         self.flush()
 
         return conversation
 
+    # ==========================================================
+    # DELETE
+    # ==========================================================
+
     def delete(
         self,
         conversation: Conversation,
     ) -> None:
+        """
+        Delete a conversation.
+        """
 
-        self.db.delete(conversation)
+        self.db.delete(
+            conversation
+        )

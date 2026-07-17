@@ -1,25 +1,35 @@
+import json
+
 from app.agents.sql_agent.context_engine.sql_context_builder import (
     SQLContextBuilder,
+)
+
+from app.agents.sql_agent.context_engine.selectors.knowledge_selector import (
+    KnowledgeSelector,
 )
 
 from app.agents.sql_agent.prompts import (
     PromptBuilder,
 )
 
+from app.agents.sql_agent.sql_executor import (
+    SQLExecutor,
+)
+
 from app.agents.sql_agent.sql_generator import (
     SQLGenerator,
+)
+
+from app.agents.sql_agent.sql_response_formatter import (
+    SQLResponseFormatter,
 )
 
 from app.agents.sql_agent.sql_validator import (
     SQLValidator,
 )
 
-from app.agents.sql_agent.sql_executor import (
-    SQLExecutor,
-)
-
-from app.agents.sql_agent.sql_response_formatter import (
-    SQLResponseFormatter,
+from app.logging.execution_logger import (
+    ExecutionLogger,
 )
 
 from app.models.sql_agent_models import (
@@ -29,7 +39,25 @@ from app.models.sql_agent_models import (
 
 class SQLAgent:
     """
-    Main SQL Agent orchestrator.
+    SQL Agent.
+
+    Pipeline
+
+    Question
+        ↓
+    Knowledge Selection
+        ↓
+    Context Building
+        ↓
+    Prompt Building
+        ↓
+    SQL Generation
+        ↓
+    Validation
+        ↓
+    Execution
+        ↓
+    Response Formatting
     """
 
     def __init__(
@@ -40,7 +68,10 @@ class SQLAgent:
         validator: SQLValidator,
         executor: SQLExecutor,
         formatter: SQLResponseFormatter,
+        execution_logger: ExecutionLogger,
     ):
+
+        self.selector = KnowledgeSelector()
 
         self.context_builder = context_builder
 
@@ -54,123 +85,259 @@ class SQLAgent:
 
         self.formatter = formatter
 
+        self.execution_logger = execution_logger
+
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
+
     def ask(
         self,
         question: str,
+        conversation_id: int,
     ) -> SQLAgentResponse:
         """
         Execute the complete SQL Agent pipeline.
         """
 
-        # ------------------------------------------------------------------
-        # Build Context
-        # ------------------------------------------------------------------
+        execution = self.execution_logger.start(
 
-        context = self.context_builder.build_context(
-            question
-        )
-
-        # ------------------------------------------------------------------
-        # Build Prompt
-        # ------------------------------------------------------------------
-
-        prompt = self.prompt_builder.build_prompt(
             question=question,
-            context=context,
+
+            conversation_id=conversation_id,
+
         )
 
-        # ------------------------------------------------------------------
-        # Generate SQL
-        # ------------------------------------------------------------------
+        try:
 
-        sql = self.generator.generate(
-            prompt
-        ).strip()
+            # --------------------------------------------------
+            # KNOWLEDGE SELECTION
+            # --------------------------------------------------
 
-        print("\n" + "=" * 100)
-        print("GENERATED SQL")
-        print("=" * 100)
-        print(sql)
-        print("=" * 100 + "\n")
+            selection = self.selector.select(
+                question
+            )
 
-        # ------------------------------------------------------------------
-        # Empty response
-        # ------------------------------------------------------------------
+            execution.selected_tables = ", ".join(
+                selection["tables"]
+            )
 
-        if not sql:
+            # --------------------------------------------------
+            # CONTEXT
+            # --------------------------------------------------
 
-            return SQLAgentResponse(
+            context_data = self.context_builder.build_context(
 
-                success=False,
+                question=question,
 
-                answer=(
-                    "Le modèle n'a pas réussi à générer une requête SQL."
-                ),
-
-                sql=None,
-
-                rows=[],
-
-                error="EMPTY_SQL",
+                selection=selection,
 
             )
 
-        # ------------------------------------------------------------------
-        # Database cannot answer
-        # ------------------------------------------------------------------
+            print("=" * 100)
+            print("CONTEXT DATA")
+            print(context_data)
+            print("=" * 100)
+            for key, value in context_data.items():
+                print(f"\n----- {key} -----")
+                print(value)
 
-        if sql == "CANNOT_GENERATE_SQL":
+            print("=" * 100 + "\n")
 
-            return SQLAgentResponse(
+            execution.business_knowledge = context_data.get(
+                "business_knowledge",
+                "",
+            )
 
-                success=False,
+            print("Execution Business")
+            print(execution.business_knowledge)
 
-                answer=(
-                    "Je ne peux pas répondre à cette question avec les données actuellement disponibles dans la base."
-                ),
+            print("Execution Join")
+            print(execution.join_knowledge)
 
-                sql=None,
+            print("Execution Forbidden")
+            print(execution.forbidden_joins)
 
-                rows=[],
+            print("Execution Semantic")
+            print(execution.semantic_context)
 
-                error="CANNOT_GENERATE_SQL",
+            execution.join_knowledge = context_data.get(
+                "join_knowledge",
+                "",
+            )
+
+            execution.forbidden_joins = context_data.get(
+                "forbidden_joins",
+                "",
+            )
+
+            execution.semantic_context = context_data.get(
+                "semantic_context",
+                "",
+            )
+
+            if hasattr(execution, "sql_patterns"):
+                execution.sql_patterns = context_data.get(
+                    "sql_patterns",
+                    "",
+                )
+
+            execution.full_context = context_data.get(
+                "full_context",
+                "",
+            )
+
+            print("\n" + "=" * 100)
+            print("AFTER ASSIGNMENT")
+            print("=" * 100)
+
+            print("business_knowledge :", repr(execution.business_knowledge))
+            print("join_knowledge     :", repr(execution.join_knowledge))
+            print("forbidden_joins    :", repr(execution.forbidden_joins))
+            print("semantic_context   :", repr(execution.semantic_context))
+            print("sql_patterns       :", repr(execution.sql_patterns))
+            print("full_context       :", repr(execution.full_context))
+
+            print("=" * 100 + "\n")
+
+            # --------------------------------------------------
+            # PROMPT
+            # --------------------------------------------------
+
+            prompt = self.prompt_builder.build_prompt(
+
+                question=question,
+
+                context=context_data["full_context"],
+
+                selection=selection,
 
             )
 
-        # ------------------------------------------------------------------
-        # Validate SQL
-        # ------------------------------------------------------------------
+            execution.prompt = prompt
 
-        sql = self.validator.validate(
-            sql
-        )
+            # --------------------------------------------------
+            # SQL GENERATION
+            # --------------------------------------------------
 
-        # ------------------------------------------------------------------
-        # Execute SQL
-        # ------------------------------------------------------------------
+            sql = self.generator.generate(
+                prompt
+            )
 
-        rows = self.executor.execute(
-            sql
-        )
+            execution.generated_sql = sql
 
-        # ------------------------------------------------------------------
-        # Format Answer
-        # ------------------------------------------------------------------
+            if not sql:
 
-        answer = self.formatter.format(
-            rows
-        )
+                raise ValueError(
+                    "EMPTY_SQL"
+                )
 
-        return SQLAgentResponse(
+            if sql == "CANNOT_GENERATE_SQL":
 
-            success=True,
+                execution.error = "CANNOT_GENERATE_SQL"
 
-            answer=answer,
+                print("\n" + "=" * 100)
+                print("BEFORE SAVE")
+                print("=" * 100)
 
-            sql=sql,
+                print("business_knowledge :", repr(execution.business_knowledge))
+                print("join_knowledge     :", repr(execution.join_knowledge))
+                print("forbidden_joins    :", repr(execution.forbidden_joins))
+                print("semantic_context   :", repr(execution.semantic_context))
+                print("sql_patterns       :", repr(execution.sql_patterns))
+                print("full_context       :", repr(execution.full_context))
 
-            rows=rows,
+                print("=" * 100 + "\n")
 
-            error=None,
+                self.execution_logger.finish(
+                    execution
+                )
 
-        )
+                return SQLAgentResponse(
+
+                    success=False,
+
+                    answer=(
+                        "Je ne peux pas répondre à cette question "
+                        "avec les données actuellement disponibles."
+                    ),
+
+                    sql=None,
+
+                    rows=[],
+
+                    error="CANNOT_GENERATE_SQL",
+
+                )
+
+            # --------------------------------------------------
+            # VALIDATION
+            # --------------------------------------------------
+
+            sql = self.validator.validate(
+                sql
+            )
+
+            execution.validated_sql = sql
+
+            # --------------------------------------------------
+            # EXECUTION
+            # --------------------------------------------------
+
+            rows = self.executor.execute(
+                sql
+            )
+
+            execution.sql_result = json.dumps(
+
+                rows,
+
+                ensure_ascii=False,
+
+                default=str,
+
+            )
+
+            # --------------------------------------------------
+            # RESPONSE
+            # --------------------------------------------------
+
+            answer = self.formatter.format(
+                rows
+            )
+
+            execution.formatted_answer = answer
+
+            # --------------------------------------------------
+            # FINISH
+            # --------------------------------------------------
+
+            self.execution_logger.finish(
+                execution
+            )
+
+            return SQLAgentResponse(
+
+                success=True,
+
+                answer=answer,
+
+                sql=sql,
+
+                rows=rows,
+
+                error=None,
+
+            )
+
+        except Exception as ex:
+
+            self.execution_logger.fail(
+
+                execution,
+
+                ex,
+
+            )
+
+            raise

@@ -14,7 +14,15 @@ from app.database.repositories.conversation_repository import (
 
 class ConversationService:
     """
-    Service responsible for Conversation management.
+    Service responsible for managing conversations.
+
+    Responsibilities
+    ----------------
+    • Create conversations
+    • Retrieve conversations
+    • Update conversation metadata
+    • Rename conversations
+    • Delete conversations
     """
 
     def __init__(
@@ -24,7 +32,13 @@ class ConversationService:
 
         self.db = db
 
-        self.repository = ConversationRepository(db)
+        self.repository = ConversationRepository(
+            db
+        )
+
+    # ==========================================================
+    # CREATE
+    # ==========================================================
 
     def create(
         self,
@@ -39,7 +53,9 @@ class ConversationService:
 
         conversation = Conversation(
 
-            conversation_uuid=str(uuid4()),
+            conversation_uuid=str(
+                uuid4()
+            ),
 
             title=title,
 
@@ -67,10 +83,17 @@ class ConversationService:
 
         return conversation
 
+    # ==========================================================
+    # READ
+    # ==========================================================
+
     def get_by_id(
         self,
         conversation_id: int,
     ) -> Conversation | None:
+        """
+        Retrieve one conversation by ID.
+        """
 
         return self.repository.get_by_id(
             conversation_id
@@ -80,6 +103,9 @@ class ConversationService:
         self,
         conversation_uuid: str,
     ) -> Conversation | None:
+        """
+        Retrieve one conversation by UUID.
+        """
 
         return self.repository.get_by_uuid(
             conversation_uuid
@@ -88,18 +114,30 @@ class ConversationService:
     def get_all(
         self,
     ) -> list[Conversation]:
+        """
+        Retrieve every conversation.
+        """
 
         return self.repository.get_all()
 
-    def update_title(
+    # ==========================================================
+    # UPDATE
+    # ==========================================================
+
+    def rename(
         self,
         conversation: Conversation,
         title: str,
     ) -> Conversation:
+        """
+        Rename a conversation.
+        """
 
         conversation.title = title
 
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = (
+            datetime.utcnow()
+        )
 
         self.repository.update(
             conversation
@@ -107,12 +145,36 @@ class ConversationService:
 
         self.db.commit()
 
+        self.db.refresh(
+            conversation
+        )
+
         return conversation
+
+    def update_title(
+        self,
+        conversation: Conversation,
+        title: str,
+    ) -> Conversation:
+        """
+        Alias for rename().
+        """
+
+        return self.rename(
+
+            conversation,
+
+            title,
+
+        )
 
     def update_last_message(
         self,
         conversation: Conversation,
     ) -> Conversation:
+        """
+        Update conversation activity timestamp.
+        """
 
         now = datetime.utcnow()
 
@@ -126,40 +188,26 @@ class ConversationService:
 
         self.db.commit()
 
+        self.db.refresh(
+            conversation
+        )
+
         return conversation
+
+    # ==========================================================
+    # DELETE
+    # ==========================================================
 
     def delete(
         self,
         conversation: Conversation,
     ) -> None:
+        """
+        Delete a conversation.
+        """
 
         self.repository.delete(
             conversation
         )
 
         self.db.commit()
-
-    def rename(
-        self,
-        conversation: Conversation,
-        title: str,
-    ) -> Conversation:
-        """
-        Rename a conversation.
-        """
-
-        conversation.title = title
-
-        conversation.updated_at = datetime.utcnow()
-
-        self.repository.update(
-            conversation
-        )
-
-        self.db.commit()
-
-        self.db.refresh(
-            conversation
-        )
-
-        return conversation

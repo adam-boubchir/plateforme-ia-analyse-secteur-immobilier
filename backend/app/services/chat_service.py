@@ -17,7 +17,15 @@ from app.services.conversation_message_service import (
 
 class ChatService:
     """
-    Main chat orchestrator.
+    Main orchestration service of the AI platform.
+
+    Responsibilities
+    ----------------
+    • Manage conversations
+    • Store user messages
+    • Delegate the question to the appropriate AI agent
+    • Store assistant responses
+    • Update conversation metadata
     """
 
     def __init__(
@@ -33,30 +41,26 @@ class ChatService:
 
         self.message_service = message_service
 
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
+
     def chat(
         self,
         question: str,
         conversation_uuid: str | None = None,
     ) -> SQLAgentResponse:
         """
-        Process one chat message.
+        Process one user question.
         """
 
-        if conversation_uuid is None:
-            conversation = self.conversation_service.create(
-                title="Nouvelle conversation"
-            )
-        else:
+        conversation = self._get_or_create_conversation(
+            conversation_uuid
+        )
 
-            conversation = self.conversation_service.get_by_uuid(
-                conversation_uuid
-            )
-
-            if conversation is None:
-
-                raise ValueError(
-                    "Conversation not found."
-                )
+        # ------------------------------------------------------
+        # Store user message
+        # ------------------------------------------------------
 
         self.message_service.add_user_message(
 
@@ -66,9 +70,21 @@ class ChatService:
 
         )
 
+        # ------------------------------------------------------
+        # SQL Agent
+        # ------------------------------------------------------
+
         response = self.sql_agent.ask(
-            question
+
+            question=question,
+
+            conversation_id=conversation.id,
+
         )
+
+        # ------------------------------------------------------
+        # Store assistant message
+        # ------------------------------------------------------
 
         self.message_service.add_assistant_message(
 
@@ -84,21 +100,83 @@ class ChatService:
 
         )
 
+        # ------------------------------------------------------
+        # Update conversation metadata
+        # ------------------------------------------------------
+
         self.conversation_service.update_last_message(
             conversation
         )
 
+        self._update_title_if_needed(
+
+            conversation,
+
+            question,
+
+        )
+
+        response.conversation_uuid = (
+            conversation.conversation_uuid
+        )
+
+        return response
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _get_or_create_conversation(
+        self,
+        conversation_uuid: str | None,
+    ):
+        """
+        Retrieve or create a conversation.
+        """
+
+        if conversation_uuid is None:
+
+            return self.conversation_service.create(
+
+                title="Nouvelle conversation"
+
+            )
+
+        conversation = self.conversation_service.get_by_uuid(
+
+            conversation_uuid
+
+        )
+
+        if conversation is None:
+
+            raise ValueError(
+                "Conversation not found."
+            )
+
+        return conversation
+
+    def _update_title_if_needed(
+        self,
+        conversation,
+        question: str,
+    ) -> None:
+        """
+        Automatically generate the title of a new conversation.
+        """
+
         if (
+
             conversation.title is None
+
             or conversation.title == "Nouvelle conversation"
+
         ):
 
             self.conversation_service.update_title(
+
                 conversation,
+
                 question.strip()[:60],
+
             )
-
-        # On ajoute le conversation_uuid dans la réponse
-        response.conversation_uuid = conversation.conversation_uuid
-
-        return response

@@ -5,7 +5,9 @@ from app.services.metadata_service import (
 
 class TableContextBuilder:
     """
-    Build the tables section of the SQL context.
+    Build the DATABASE TABLES section of the SQL context.
+
+    Only the selected tables are included in the context.
     """
 
     def __init__(
@@ -13,13 +15,17 @@ class TableContextBuilder:
         metadata_service: MetadataService,
     ):
 
-        self.metadata_service = metadata_service
+        self.metadata_service = (
+            metadata_service
+        )
 
     def build(
         self,
+        selected_tables: list[str],
     ) -> list[str]:
         """
-        Build the tables section.
+        Build the tables section using only
+        the selected tables.
         """
 
         context = []
@@ -30,16 +36,24 @@ class TableContextBuilder:
 
         context.append("")
 
-        tables = (
-            self.metadata_service.get_tables()
-        )
+        tables = [
+
+            table
+
+            for table in self.metadata_service.get_tables()
+
+            if table.table_name in selected_tables
+
+        ]
 
         for table in tables:
 
             context.extend(
+
                 self._build_table(
                     table
                 )
+
             )
 
         context.append(
@@ -99,20 +113,22 @@ class TableContextBuilder:
                     "Category : DIMENSION TABLE"
                 )
 
-        context.append("Columns :")
+        context.append(
+            "Columns:"
+        )
 
-        columns = (
-            self.metadata_service.get_columns(
-                table.table_name
-            )
+        columns = self.metadata_service.get_columns(
+            table.table_name
         )
 
         for column in columns:
 
             context.append(
+
                 self._build_column(
                     column
                 )
+
             )
 
         context.append("")
@@ -131,20 +147,28 @@ class TableContextBuilder:
 
         if column.is_primary_key:
 
-            flags.append("PK")
+            flags.append(
+                "PK"
+            )
 
         if column.is_foreign_key:
 
-            flags.append("FK")
+            flags.append(
+                "FK"
+            )
 
         flag_text = ""
 
         if flags:
 
             flag_text = (
+
                 " ["
+
                 + ", ".join(flags)
+
                 + "]"
+
             )
 
         length = ""
@@ -156,13 +180,22 @@ class TableContextBuilder:
             )
 
         line = (
+
             f"  • {column.column_name}"
+
             f" : {column.data_type}"
+
             f"{length}"
+
             f"{flag_text}"
+
         )
 
-        if column.semantic_type:
+        if getattr(
+            column,
+            "semantic_type",
+            None,
+        ):
 
             line += (
                 f" | Semantic={column.semantic_type}"

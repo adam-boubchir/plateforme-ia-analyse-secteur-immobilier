@@ -1,149 +1,130 @@
+from app.agents.sql_agent.few_shots.examples import (
+    FEW_SHOT_EXAMPLES,
+)
+
+
 class FewShotProvider:
     """
-    Return the most relevant SQL examples
-    according to the user's question.
+    Provides the most relevant few-shot examples
+    according to the detected user question.
+
+    This class can later be replaced by a vector
+    search (embeddings/RAG) without modifying the
+    PromptBuilder.
     """
+
+    def __init__(self):
+
+        self.examples = FEW_SHOT_EXAMPLES
+
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
 
     def get_examples(
         self,
         question: str,
+        max_examples: int = 3,
     ) -> str:
+        """
+        Return the most relevant examples.
+        """
+
+        ranked_examples = self._rank_examples(
+            question
+        )
+
+        if not ranked_examples:
+
+            return "No example available."
+
+        prompt = []
+
+        for example in ranked_examples[:max_examples]:
+
+            prompt.extend(
+                self._format_example(example)
+            )
+
+        return "\n".join(prompt)
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _rank_examples(
+        self,
+        question: str,
+    ):
+        """
+        Very simple keyword ranking.
+
+        This will later be replaced by
+        semantic search.
+        """
 
         question = question.lower()
 
-        examples = []
+        scored = []
 
-        # ==================================================
-        # COMMUNE
-        # ==================================================
+        for example in self.examples:
 
-        if any(word in question for word in [
+            score = 0
 
-            "commune",
-            "communes",
+            keywords = example.get(
+                "keywords",
+                [],
+            )
 
-        ]):
+            for keyword in keywords:
 
-            examples.append("""
+                if keyword.lower() in question:
 
-Question:
-Affiche toutes les communes.
+                    score += 1
 
-SQL:
-SELECT *
-FROM COMMUNE;
+            scored.append(
+                (
+                    score,
+                    example,
+                )
+            )
 
-----------------------------------------
+        scored.sort(
+            key=lambda x: x[0],
+            reverse=True,
+        )
 
-Question:
-Donne-moi les 10 premières communes.
+        return [
 
-SQL:
-SELECT TOP (10)
-    id_commune,
-    nom_commune
-FROM COMMUNE
-ORDER BY nom_commune;
+            example
 
-""")
+            for score, example in scored
 
-        # ==================================================
-        # REGION
-        # ==================================================
+            if score > 0
 
-        if any(word in question for word in [
+        ]
 
-            "région",
-            "region",
-            "régions",
-            "regions",
+    def _format_example(
+        self,
+        example: dict,
+    ):
 
-        ]):
+        lines = []
 
-            examples.append("""
+        lines.append("=" * 60)
 
-Question:
-Prix moyen par région.
+        lines.append(
+            f"Question : {example['question']}"
+        )
 
-SQL:
-SELECT
-    r.nom_region,
-    AVG(f.prix_moyen) AS prix_moyen
-FROM FACT_PRIX_INDICES f
-JOIN REGION r
-ON f.id_region = r.id_region
-GROUP BY r.nom_region;
+        lines.append("")
 
-""")
+        lines.append("SQL")
 
-        # ==================================================
-        # PRIX
-        # ==================================================
+        lines.append(example["sql"])
 
-        if any(word in question for word in [
+        lines.append("=" * 60)
 
-            "prix",
-            "indice",
+        lines.append("")
 
-        ]):
-
-            examples.append("""
-
-Question:
-Prix moyen par année.
-
-SQL:
-SELECT
-    annee,
-    AVG(prix_moyen) AS prix_moyen
-FROM FACT_PRIX_INDICES
-GROUP BY annee
-ORDER BY annee;
-
-""")
-
-        # ==================================================
-        # LOYER
-        # ==================================================
-
-        if any(word in question for word in [
-
-            "loyer",
-            "loyers",
-
-        ]):
-
-            examples.append("""
-
-Question:
-Loyer moyen par quartier.
-
-SQL:
-SELECT
-    q.nom_quartier,
-    AVG(l.loyer_moyen_mad) AS loyer
-FROM LOYER_QUARTIER l
-JOIN QUARTIER q
-ON l.id_quartier=q.id_quartier
-GROUP BY q.nom_quartier;
-
-""")
-
-        # ==================================================
-        # Aucun exemple trouvé
-        # ==================================================
-
-        if len(examples) == 0:
-
-            examples.append("""
-
-Question:
-Combien existe-t-il de communes ?
-
-SQL:
-SELECT COUNT(*) AS nombre_communes
-FROM COMMUNE;
-
-""")
-
-        return "\n".join(examples)
+        return lines

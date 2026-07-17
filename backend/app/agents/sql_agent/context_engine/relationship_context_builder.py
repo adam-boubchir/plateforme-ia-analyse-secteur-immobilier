@@ -5,7 +5,10 @@ from app.services.metadata_service import (
 
 class RelationshipContextBuilder:
     """
-    Build the relationships section of the SQL context.
+    Build the DATABASE RELATIONSHIPS section of the SQL context.
+
+    Only relationships involving the selected tables
+    are included in the context.
     """
 
     def __init__(
@@ -13,13 +16,17 @@ class RelationshipContextBuilder:
         metadata_service: MetadataService,
     ):
 
-        self.metadata_service = metadata_service
+        self.metadata_service = (
+            metadata_service
+        )
 
     def build(
         self,
+        selected_tables: list[str],
     ) -> list[str]:
         """
-        Build the relationships section.
+        Build the relationships section using only
+        the selected tables.
         """
 
         context = []
@@ -30,9 +37,18 @@ class RelationshipContextBuilder:
 
         context.append("")
 
-        relationships = (
-            self.metadata_service.get_relationships()
-        )
+        relationships = [
+
+            relationship
+
+            for relationship in self.metadata_service.get_relationships()
+
+            if (
+                relationship.source_table in selected_tables
+                and relationship.target_table in selected_tables
+            )
+
+        ]
 
         if not relationships:
 
@@ -51,9 +67,11 @@ class RelationshipContextBuilder:
         for relationship in relationships:
 
             context.extend(
+
                 self._build_relationship(
                     relationship
                 )
+
             )
 
         context.append(

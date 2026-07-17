@@ -1,4 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import (
+    func,
+    select,
+)
 from sqlalchemy.orm import Session
 
 from app.database.entities.conversation_message import (
@@ -22,27 +25,63 @@ class ConversationMessageRepository(BaseRepository):
 
         super().__init__(db)
 
+    # ==========================================================
+    # CREATE
+    # ==========================================================
+
     def create(
         self,
         message: ConversationMessage,
     ) -> ConversationMessage:
+        """
+        Persist a new conversation message.
+        """
 
-        self.add(message)
+        self.add(
+            message
+        )
 
         self.flush()
 
         return message
 
+    # ==========================================================
+    # READ
+    # ==========================================================
+
+    def get_by_id(
+        self,
+        message_id: int,
+    ) -> ConversationMessage | None:
+        """
+        Retrieve one message by its ID.
+        """
+
+        return self.db.scalar(
+
+            select(
+                ConversationMessage
+            ).where(
+                ConversationMessage.id == message_id
+            )
+
+        )
+
     def get_by_conversation(
         self,
         conversation_id: int,
     ) -> list[ConversationMessage]:
+        """
+        Retrieve all messages of one conversation.
+        """
 
         return list(
 
             self.db.scalars(
 
-                select(ConversationMessage)
+                select(
+                    ConversationMessage
+                )
 
                 .where(
                     ConversationMessage.conversation_id
@@ -61,18 +100,55 @@ class ConversationMessageRepository(BaseRepository):
         self,
         conversation_id: int,
     ) -> int:
+        """
+        Return the number of messages of one conversation.
+        """
 
-        return len(
+        return self.db.scalar(
 
-            self.get_by_conversation(
-                conversation_id
+            select(
+                func.count()
             )
 
-        )
+            .select_from(
+                ConversationMessage
+            )
+
+            .where(
+                ConversationMessage.conversation_id
+                == conversation_id
+            )
+
+        ) or 0
+
+    # ==========================================================
+    # UPDATE
+    # ==========================================================
+
+    def update(
+        self,
+        message: ConversationMessage,
+    ) -> ConversationMessage:
+        """
+        Flush pending modifications.
+        """
+
+        self.flush()
+
+        return message
+
+    # ==========================================================
+    # DELETE
+    # ==========================================================
 
     def delete(
         self,
         message: ConversationMessage,
     ) -> None:
+        """
+        Delete one message.
+        """
 
-        self.db.delete(message)
+        self.db.delete(
+            message
+        )

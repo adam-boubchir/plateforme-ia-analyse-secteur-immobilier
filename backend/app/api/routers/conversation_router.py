@@ -28,6 +28,10 @@ from app.services.conversation_service import (
     ConversationService,
 )
 
+from app.dependencies.log import (
+    get_log_service,
+)
+
 router = APIRouter(
     prefix="/api/v1/conversations",
     tags=["Conversations"],
@@ -194,5 +198,75 @@ def delete_conversation(
     return {
 
         "success": True
+
+    }
+
+@router.get(
+    "/{conversation_uuid}/logs",
+)
+def get_conversation_logs(
+    conversation_uuid: str,
+    db: Session = Depends(get_immo_db),
+):
+    """
+    Return every execution log belonging
+    to one conversation.
+    """
+
+    conversation_service = get_conversation_service(
+        db
+    )
+
+    log_service = get_log_service(
+        db
+    )
+
+    conversation = conversation_service.get_by_uuid(
+        conversation_uuid
+    )
+
+    if conversation is None:
+
+        raise HTTPException(
+
+            status_code=404,
+
+            detail="Conversation not found.",
+
+        )
+
+    logs = log_service.get_logs_by_conversation(
+
+        conversation.id
+
+    )
+
+    return {
+
+        "success": True,
+
+        "conversation_uuid": conversation_uuid,
+
+        "conversation_title": conversation.title,
+
+        "logs": [
+
+            {
+
+                "id": log.id,
+
+                "question": log.question,
+
+                "status": log.status,
+
+                "execution_time_ms": log.execution_time_ms,
+
+                "created_at": log.created_at,
+
+            }
+
+            for log in logs
+
+        ],
 
     }

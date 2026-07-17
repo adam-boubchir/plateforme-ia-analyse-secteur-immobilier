@@ -1,38 +1,39 @@
+import { Outlet } from "react-router-dom";
+
 import Sidebar from "../components/sidebar/Sidebar";
-import ChatPage from "../pages/ChatPage";
 
 const MainLayout = () => {
 
-  return (
+    return (
 
-    <div
-      className="
-        flex
-        h-screen
-        overflow-hidden
-        bg-[#0f0f0f]
-        text-white
-      "
-    >
+        <div
+            className="
+                flex
+                h-screen
+                overflow-hidden
+                bg-[#0f0f0f]
+                text-white
+            "
+        >
 
-      <Sidebar />
+            <Sidebar />
 
-      <div
-        className="
-          flex-1
-          overflow-hidden
-          flex
-          flex-col
-        "
-      >
+            <div
+                className="
+                    flex-1
+                    overflow-hidden
+                    flex
+                    flex-col
+                "
+            >
 
-        <ChatPage />
+                <Outlet />
 
-      </div>
+            </div>
 
-    </div>
+        </div>
 
-  );
+    );
 
 };
 
