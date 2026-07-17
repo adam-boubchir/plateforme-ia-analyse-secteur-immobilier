@@ -1,6 +1,8 @@
 fastapi
 uvicorn
-python-dotenv
 sqlalchemy
 pyodbc
 openai
+python-dotenv
+pydantic
+httpx
