@@ -7,9 +7,9 @@ import {
 import MainLayout from "../layouts/MainLayout";
 
 import ChatPage from "../pages/ChatPage";
+import MapPage from "../pages/MapPage";
 
 import ConversationLogsPage from "../pages/ConversationLogs/ConversationLogsPage";
-
 import LogDetailsPage from "../pages/Logs/LogDetailsPage";
 
 const AppRoutes = () => {
@@ -24,28 +24,30 @@ const AppRoutes = () => {
             >
 
                 {/* Redirect */}
-
                 <Route
                     index
                     element={<Navigate to="/chat" replace />}
                 />
 
                 {/* Chat */}
-
                 <Route
                     path="chat"
                     element={<ChatPage />}
                 />
 
-                {/* Logs d'une conversation */}
+                {/* Carte du Maroc */}
+                <Route
+                    path="map"
+                    element={<MapPage />}
+                />
 
+                {/* Logs d'une conversation */}
                 <Route
                     path="conversations/:conversation_uuid/logs"
                     element={<ConversationLogsPage />}
                 />
 
                 {/* Détails d'un log */}
-
                 <Route
                     path="logs/:id"
                     element={<LogDetailsPage />}
@@ -54,7 +56,6 @@ const AppRoutes = () => {
             </Route>
 
             {/* Route inconnue */}
-
             <Route
                 path="*"
                 element={<Navigate to="/chat" replace />}

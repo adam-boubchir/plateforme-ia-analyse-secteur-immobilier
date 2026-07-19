@@ -21,24 +21,22 @@ const SidebarNavigation = () => {
 
     return (
 
-        <div className="px-3 py-2 border-b border-white/10">
+        <div className="px-3 py-2 border-b border-white/10 space-y-2">
 
             <NavLink
-
                 to="/chat"
-
                 className={linkClass}
-
             >
-
                 💬
+                <span>Chat</span>
+            </NavLink>
 
-                <span>
-
-                    Chat
-
-                </span>
-
+            <NavLink
+                to="/map"
+                className={linkClass}
+            >
+                🗺️
+                <span>Carte du Maroc</span>
             </NavLink>
 
         </div>

@@ -21,9 +21,15 @@ from app.api.routers.logs_router import (
     router as logs_router,
 )
 
+from app.api.routers.map import (
+    router as map_router,
+)
+
 from app.core.exceptions import (
     register_exception_handlers,
 )
+
+import app.database.entities
 
 # ==========================================================
 # Load Environment Variables
@@ -71,6 +77,7 @@ app.include_router(health_router)
 app.include_router(conversation_router)
 app.include_router(chat_router)
 app.include_router(logs_router)
+app.include_router(map_router)
 
 # ==========================================================
 # Run Application
