@@ -79,7 +79,7 @@ const ChatHeader = () => {
               "
             >
 
-              Habitat AI
+              Immobilier AI
 
             </h1>
 

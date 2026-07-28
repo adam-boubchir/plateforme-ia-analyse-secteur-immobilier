@@ -60,7 +60,7 @@ const SidebarHeader = () => {
 
             <h1 className="font-bold text-xl">
 
-              Habitat AI
+              Immobilier AI
 
             </h1>
 

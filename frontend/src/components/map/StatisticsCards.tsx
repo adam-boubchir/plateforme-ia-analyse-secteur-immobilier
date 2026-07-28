@@ -9,14 +9,15 @@ interface SelectedRegion {
     name: string;
 }
 
+interface Statistics {
+    nombre_provinces: number;
+    prix_moyen?: number;
+    indice_moyen?: number;
+}
+
 interface StatisticsCardsProps {
     region?: SelectedRegion;
-
-    statistics?: {
-        nombre_provinces: number;
-        prix_moyen: number;
-        indice_moyen: number;
-    };
+    statistics?: Statistics;
 }
 
 export default function StatisticsCards({
@@ -33,7 +34,8 @@ export default function StatisticsCards({
         {
             title: "Prix moyen",
             value:
-                statistics?.prix_moyen != null
+                statistics?.prix_moyen !== undefined &&
+                statistics.prix_moyen !== null
                     ? `${statistics.prix_moyen.toFixed(2)} MAD`
                     : "—",
             icon: BarChart3,
@@ -41,7 +43,8 @@ export default function StatisticsCards({
         {
             title: "Indice moyen",
             value:
-                statistics?.indice_moyen != null
+                statistics?.indice_moyen !== undefined &&
+                statistics.indice_moyen !== null
                     ? statistics.indice_moyen.toFixed(2)
                     : "—",
             icon: Layers3,
@@ -56,10 +59,12 @@ export default function StatisticsCards({
                 const Icon = card.icon;
 
                 return (
+
                     <div
                         key={card.title}
                         className="rounded-2xl bg-white p-5 shadow-lg transition hover:shadow-xl"
                     >
+
                         <Icon
                             className="mb-3 text-blue-600"
                             size={24}
@@ -74,10 +79,12 @@ export default function StatisticsCards({
                         </h2>
 
                     </div>
+
                 );
 
             })}
 
         </div>
     );
+
 }

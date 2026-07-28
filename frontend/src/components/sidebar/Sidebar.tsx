@@ -10,7 +10,7 @@ const Sidebar = () => {
         <aside
             className="
                 w-80
-                h-screen
+                min-h-screen
                 bg-[#171717]
                 border-r
                 border-white/10
@@ -20,15 +20,9 @@ const Sidebar = () => {
             "
         >
 
-            {/* Header */}
-
             <SidebarHeader />
 
-            {/* Navigation */}
-
             <SidebarNavigation />
-
-            {/* Conversations */}
 
             <div
                 className="
@@ -40,8 +34,6 @@ const Sidebar = () => {
                 <ConversationList />
 
             </div>
-
-            {/* Footer */}
 
             <SidebarFooter />
 

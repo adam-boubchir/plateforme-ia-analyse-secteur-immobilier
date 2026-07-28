@@ -70,7 +70,7 @@ const MessageHeader = ({ role }: Props) => {
 
                 ? "Vous"
 
-                : "Habitat AI"
+                : "Immobilier AI"
 
             }
 

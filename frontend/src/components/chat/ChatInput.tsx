@@ -245,7 +245,7 @@ const ChatInput = () => {
           "
         >
 
-          Habitat AI peut générer des réponses inexactes. Vérifiez les résultats importants.
+          Immobilier AI peut générer des réponses inexactes. Vérifiez les résultats importants.
 
         </p>
 

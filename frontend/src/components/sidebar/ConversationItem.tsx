@@ -75,11 +75,17 @@ const ConversationItem = ({ conversation }: Props) => {
 
   const handleClick = async () => {
 
+    console.log("CLICK");
+
     setOpenedMenu(null);
+
+    console.log("Avant selectConversation");
 
     await selectConversation(
         conversation.conversation_uuid
     );
+
+    console.log("Après selectConversation");
 
     navigate("/chat");
 

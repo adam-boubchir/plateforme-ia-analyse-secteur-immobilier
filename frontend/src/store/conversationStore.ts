@@ -15,6 +15,7 @@ import {
 
 import { useChatStore } from "./chatStore";
 
+console.log("getConversationDetails =", getConversationDetails);
 interface ConversationStore {
 
   conversations: Conversation[];

@@ -5,10 +5,7 @@ from app.database.repositories.map_repository import MapRepository
 
 class MapService:
 
-    def __init__(
-        self,
-        db: Session,
-    ):
+    def __init__(self, db: Session):
         self.repository = MapRepository(db)
 
     # ==========================================================
@@ -37,6 +34,16 @@ class MapService:
         return self.repository.search_regions(keyword)
 
     # ==========================================================
+    # Provinces
+    # ==========================================================
+
+    def get_provinces_by_region(
+        self,
+        region_id: int,
+    ):
+        return self.repository.get_provinces_by_region(region_id)
+
+    # ==========================================================
     # Statistiques
     # ==========================================================
 
@@ -47,7 +54,7 @@ class MapService:
         return self.repository.get_region_statistics(region_id)
 
     # ==========================================================
-    # Evolution des prix
+    # Prix
     # ==========================================================
 
     def get_price_history(
@@ -65,3 +72,51 @@ class MapService:
         region_id: int,
     ):
         return self.repository.get_housing_statistics(region_id)
+
+    # ==========================================================
+    # Analyse
+    # ==========================================================
+
+    def analyze_prices(
+        self,
+        region_id: int,
+        province_id: int | None = None,
+        material_id: int | None = None,
+        year: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ):
+        return self.repository.analyze_prices(
+            region_id=region_id,
+            province_id=province_id,
+            material_id=material_id,
+            year=year,
+            page=page,
+            page_size=page_size,
+        )
+
+    def analyze_housing(
+        self,
+        region_id: int,
+        province_id: int | None = None,
+        year: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ):
+        return self.repository.analyze_housing(
+            region_id=region_id,
+            province_id=province_id,
+            year=year,
+            page=page,
+            page_size=page_size,
+        )
+
+    # ==========================================================
+    # Filtres
+    # ==========================================================
+
+    def get_materials(self):
+        return self.repository.get_materials()
+
+    def get_available_years(self):
+        return self.repository.get_available_years()

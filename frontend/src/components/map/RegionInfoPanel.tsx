@@ -12,10 +12,11 @@ interface SelectedRegion {
 }
 
 interface RegionStatistics {
+    region: string;
     nombre_provinces: number;
-    nombre_logements: number;
-    prix_moyen: number;
-    indice_moyen: number;
+    nombre_logements?: number;
+    prix_moyen?: number;
+    indice_moyen?: number;
 }
 
 interface RegionInfoPanelProps {
@@ -27,12 +28,14 @@ export default function RegionInfoPanel({
     selectedRegion,
     statistics,
 }: RegionInfoPanelProps) {
+
     return (
+
         <div className="flex h-full flex-col gap-5">
 
             {/* Région sélectionnée */}
 
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-lg">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
                 <div className="mb-5 flex items-center gap-3">
 
@@ -41,38 +44,44 @@ export default function RegionInfoPanel({
                         className="text-blue-600"
                     />
 
-                    <h2 className="text-lg font-semibold text-slate-800">
+                    <h2 className="text-lg font-semibold text-white">
                         Région sélectionnée
                     </h2>
 
                 </div>
 
                 {selectedRegion ? (
+
                     <>
+
                         <h1 className="text-2xl font-bold text-blue-700">
                             {selectedRegion.name}
                         </h1>
 
-                        <p className="mt-3 text-slate-500">
+                        <p className="mt-3 text-slate-400">
                             Consultez les indicateurs immobiliers,
-                            les prix des matériaux et les analyses IA
-                            de cette région.
+                            les prix des matériaux de construction
+                            et les analyses IA de cette région.
                         </p>
-                    </>
-                ) : (
-                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
 
-                        <p className="text-slate-500">
+                    </>
+
+                ) : (
+
+                    <div className="rounded-xl border border-dashed border-slate-700 bg-slate-800 p-5">
+
+                        <p className="text-slate-300">
                             Cliquez sur une région de la carte pour afficher
                             ses statistiques.
                         </p>
 
                     </div>
+
                 )}
 
             </div>
 
-            {/* Cartes statistiques */}
+            {/* Statistiques */}
 
             <StatisticsCards
                 region={selectedRegion}
@@ -94,17 +103,16 @@ export default function RegionInfoPanel({
                 </div>
 
                 <p className="leading-7 text-blue-100">
-                    Sélectionnez une région puis posez vos questions
-                    concernant les données immobilières,
-                    les matériaux de construction
+                    Sélectionnez une région puis posez vos questions concernant
+                    les données immobilières, les matériaux de construction
                     et les indicateurs de l'habitat.
                 </p>
 
                 <div className="mt-6 rounded-xl bg-white/10 p-4">
 
                     <p className="italic text-blue-50">
-                        « Quel est le prix moyen des matériaux de
-                        construction dans cette région ? »
+                        « Quel est le prix moyen des matériaux de construction
+                        dans cette région ? »
                     </p>
 
                 </div>
@@ -112,13 +120,17 @@ export default function RegionInfoPanel({
                 <button
                     className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 font-semibold text-blue-700 transition hover:scale-105"
                 >
+
                     Poser une question à l'IA
 
                     <ArrowRight size={18} />
+
                 </button>
 
             </div>
 
         </div>
+
     );
+
 }

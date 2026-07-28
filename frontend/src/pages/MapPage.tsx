@@ -2,20 +2,26 @@ import { useEffect, useState } from "react";
 
 import MoroccoMap from "../components/map/MoroccoMap";
 import RegionInfoPanel from "../components/map/RegionInfoPanel";
-import RegionCharts from "../components/map/RegionCharts";
+import AnalysisPanel from "../components/map/AnalysisPanel";
+import ResultsTable from "../components/map/ResultsTable";
+import ChartsPanel from "../components/map/ChartsPanel";
 
 import mapService from "../services/mapService";
 
 import type {
+    PriceAnalysisResponse,
+    HousingAnalysisResponse,
     RegionStatistics,
-    PriceHistory,
-    HousingStatistics,
 } from "../services/mapService";
 
 interface SelectedRegion {
     code: string;
     name: string;
 }
+
+type AnalysisResult =
+    | PriceAnalysisResponse
+    | HousingAnalysisResponse;
 
 export default function MapPage() {
 
@@ -25,78 +31,236 @@ export default function MapPage() {
     const [statistics, setStatistics] =
         useState<RegionStatistics>();
 
-    const [prices, setPrices] =
-        useState<PriceHistory[]>([]);
+    const [analysisResult, setAnalysisResult] =
+        useState<AnalysisResult>();
 
-    const [housing, setHousing] =
-        useState<HousingStatistics[]>([]);
+    const [lastAnalysisParams, setLastAnalysisParams] = useState<{
+        regionCode: string;
+        zoneType: "region" | "province";
+        provinceId?: number;
+        materialId?: number;
+        year?: number;
+        analysisType: "prices" | "housing" | "both";
+    }>();
+
+    /*
+    ------------------------------------------------------------------------
+    | Charger les statistiques
+    ------------------------------------------------------------------------
+    */
 
     useEffect(() => {
 
-        if (!selectedRegion) return;
+        if (!selectedRegion) {
 
-        const region = selectedRegion;
+            setStatistics(undefined);
 
-        async function loadRegionData() {
+            return;
+
+        }
+
+        const regionCode = selectedRegion.code;
+
+        async function loadStatistics() {
 
             try {
 
-                const [
-                    statisticsData,
-                    pricesData,
-                    housingData,
-                ] = await Promise.all([
+                const data =
+                    await mapService.getRegionStatistics(
+                        regionCode
+                    );
 
-                    mapService.getRegionStatistics(
-                        region.code
-                    ),
-
-                    mapService.getPriceHistory(
-                        region.code
-                    ),
-
-                    mapService.getHousingStatistics(
-                        region.code
-                    ),
-
-                ]);
-
-                setStatistics(statisticsData);
-                setPrices(pricesData);
-                setHousing(housingData);
+                setStatistics(data);
 
             } catch (error) {
 
-                console.error(
-                    "Erreur lors du chargement des données :",
-                    error
-                );
+                console.error(error);
+
+                setStatistics(undefined);
 
             }
 
         }
 
-        loadRegionData();
+        loadStatistics();
 
     }, [selectedRegion]);
 
+    /*
+    ------------------------------------------------------------------------
+    | Analyse
+    ------------------------------------------------------------------------
+    */
+
+    async function handleAnalyze(params: {
+        regionCode: string;
+        zoneType: "region" | "province";
+        provinceId?: number;
+        materialId?: number;
+        year?: number;
+        analysisType: "prices" | "housing" | "both";
+    }) {
+
+        try {
+
+            setLastAnalysisParams(params);
+
+            const region =
+                await mapService.getRegion(
+                    params.regionCode
+                );
+
+            let result;
+
+            if (params.analysisType === "prices") {
+
+                result =
+                    await mapService.analyzePrices({
+
+                        analysis_type: "prices",
+
+                        region_id: region.id_region,
+
+                        province_id:
+                            params.zoneType === "province"
+                                ? params.provinceId
+                                : undefined,
+
+                        material_id: params.materialId,
+
+                        year: params.year,
+
+                        page: 1,
+
+                        page_size: 20,
+
+                    });
+
+            }
+
+            else if (params.analysisType === "housing") {
+
+                result =
+                    await mapService.analyzeHousing({
+
+                        analysis_type: "housing",
+
+                        region_id: region.id_region,
+
+                        province_id:
+                            params.zoneType === "province"
+                                ? params.provinceId
+                                : undefined,
+
+                        year: params.year,
+
+                        page: 1,
+
+                        page_size: 20,
+
+                    });
+
+            }
+
+            else {
+
+                alert("L'analyse combinée sera disponible prochainement.");
+
+                return;
+
+            }
+
+            setAnalysisResult(result);
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    }
+
+    async function handlePageChange(page: number) {
+
+        if (!lastAnalysisParams) return;
+
+        try {
+
+            const region = await mapService.getRegion(
+                lastAnalysisParams.regionCode
+            );
+
+            let result;
+
+            if (lastAnalysisParams.analysisType === "prices") {
+
+                result = await mapService.analyzePrices({
+
+                    analysis_type: "prices",
+
+                    region_id: region.id_region,
+
+                    province_id:
+                        lastAnalysisParams.zoneType === "province"
+                            ? lastAnalysisParams.provinceId
+                            : undefined,
+
+                    material_id: lastAnalysisParams.materialId,
+
+                    year: lastAnalysisParams.year,
+
+                    page,
+
+                    page_size: 20,
+
+                });
+
+            } else {
+
+                result = await mapService.analyzeHousing({
+
+                    analysis_type: "housing",
+
+                    region_id: region.id_region,
+
+                    province_id:
+                        lastAnalysisParams.zoneType === "province"
+                            ? lastAnalysisParams.provinceId
+                            : undefined,
+
+                    year: lastAnalysisParams.year,
+
+                    page,
+
+                    page_size: 20,
+
+                });
+
+            }
+
+            setAnalysisResult(result);
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    }
+
     return (
 
-        <div className="h-screen bg-slate-100">
+        <div className="bg-[#0f172a] text-white">
 
-            <div className="grid h-full grid-cols-12 gap-6 p-6">
+            <div className="grid grid-cols-12 gap-6 p-6">
 
-                {/* Carte */}
-
-                <div className="col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
+                <div className="col-span-7 overflow-hidden rounded-3xl bg-white shadow-2xl">
 
                     <MoroccoMap
                         onRegionSelect={setSelectedRegion}
                     />
 
                 </div>
-
-                {/* Informations */}
 
                 <div className="col-span-5 flex flex-col gap-6">
 
@@ -105,15 +269,31 @@ export default function MapPage() {
                         statistics={statistics}
                     />
 
-                    <RegionCharts
-                        region={selectedRegion}
-                        prices={prices}
-                        housing={housing}
+                    <AnalysisPanel
+                        selectedRegion={selectedRegion}
+                        onAnalyze={handleAnalyze}
                     />
 
                 </div>
 
             </div>
+
+            {analysisResult && (
+
+                <div className="space-y-6 px-6 pb-6">
+
+                    <ResultsTable
+                        result={analysisResult}
+                        onPageChange={handlePageChange}
+                    />
+
+                    <ChartsPanel
+                        result={analysisResult}
+                    />
+
+                </div>
+
+            )}
 
         </div>
 
