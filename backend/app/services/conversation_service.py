@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.database.entities.conversation import (
     Conversation,
 )
-
 from app.database.repositories.conversation_repository import (
     ConversationRepository,
 )
@@ -25,15 +24,19 @@ class ConversationService:
     • Delete conversations
     """
 
+    ACTIVE_STATUS = "ACTIVE"
+
     def __init__(
         self,
         db: Session,
-    ):
+    ) -> None:
 
-        self.db = db
+        self.db: Session = db
 
-        self.repository = ConversationRepository(
-            db
+        self.repository: ConversationRepository = (
+            ConversationRepository(
+                db=db,
+            )
         )
 
     # ==========================================================
@@ -52,33 +55,21 @@ class ConversationService:
         now = datetime.utcnow()
 
         conversation = Conversation(
-
-            conversation_uuid=str(
-                uuid4()
-            ),
-
+            conversation_uuid=str(uuid4()),
             title=title,
-
             user_id=user_id,
-
-            status="ACTIVE",
-
+            status=self.ACTIVE_STATUS,
             created_at=now,
-
             updated_at=now,
-
             last_message_at=now,
-
         )
 
         self.repository.create(
-            conversation
+            conversation=conversation,
         )
 
-        self.db.commit()
-
-        self.db.refresh(
-            conversation
+        self._commit_and_refresh(
+            conversation=conversation,
         )
 
         return conversation
@@ -96,7 +87,7 @@ class ConversationService:
         """
 
         return self.repository.get_by_id(
-            conversation_id
+            conversation_id=conversation_id,
         )
 
     def get_by_uuid(
@@ -108,7 +99,7 @@ class ConversationService:
         """
 
         return self.repository.get_by_uuid(
-            conversation_uuid
+            conversation_uuid=conversation_uuid,
         )
 
     def get_all(
@@ -135,18 +126,16 @@ class ConversationService:
 
         conversation.title = title
 
-        conversation.updated_at = (
-            datetime.utcnow()
+        self._touch(
+            conversation=conversation,
         )
 
         self.repository.update(
-            conversation
+            conversation=conversation,
         )
 
-        self.db.commit()
-
-        self.db.refresh(
-            conversation
+        self._commit_and_refresh(
+            conversation=conversation,
         )
 
         return conversation
@@ -161,11 +150,8 @@ class ConversationService:
         """
 
         return self.rename(
-
-            conversation,
-
-            title,
-
+            conversation=conversation,
+            title=title,
         )
 
     def update_last_message(
@@ -179,17 +165,14 @@ class ConversationService:
         now = datetime.utcnow()
 
         conversation.last_message_at = now
-
         conversation.updated_at = now
 
         self.repository.update(
-            conversation
+            conversation=conversation,
         )
 
-        self.db.commit()
-
-        self.db.refresh(
-            conversation
+        self._commit_and_refresh(
+            conversation=conversation,
         )
 
         return conversation
@@ -207,7 +190,40 @@ class ConversationService:
         """
 
         self.repository.delete(
-            conversation
+            conversation=conversation,
         )
 
         self.db.commit()
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _touch(
+        self,
+        conversation: Conversation,
+    ) -> None:
+        """
+        Update the modification timestamp.
+        """
+
+        conversation.updated_at = datetime.utcnow()
+
+    def _commit_and_refresh(
+        self,
+        conversation: Conversation,
+    ) -> None:
+        """
+        Commit the transaction and refresh the entity.
+        """
+
+        self.db.commit()
+
+        self.db.refresh(
+            conversation,
+        )
+
+
+__all__ = [
+    "ConversationService",
+]

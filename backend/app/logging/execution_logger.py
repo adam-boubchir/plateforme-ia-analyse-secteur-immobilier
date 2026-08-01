@@ -11,16 +11,20 @@ from app.services.log_service import (
 
 class ExecutionLogger:
     """
-    Responsible for recording the execution of AI agents.
+    Responsible for recording AI agent executions.
 
-    This class creates an ExecutionContext, enriches it
-    during the execution and finally persists it.
+    Responsibilities
+    ----------------
+    • Create an execution context
+    • Measure execution time
+    • Mark execution status
+    • Persist execution logs
     """
 
     def __init__(
         self,
         log_service: LogService,
-    ):
+    ) -> None:
 
         self.log_service = log_service
 
@@ -34,7 +38,7 @@ class ExecutionLogger:
         conversation_id: int | None = None,
     ) -> ExecutionContext:
         """
-        Create a fresh execution context.
+        Create a new execution context.
         """
 
         context = ExecutionContext(
@@ -63,22 +67,7 @@ class ExecutionLogger:
         Finalize a successful execution.
         """
 
-        context.finished_at = datetime.utcnow()
-
-        if context.started_at:
-
-            context.execution_time = (
-
-                context.finished_at
-                - context.started_at
-
-            ).total_seconds()
-
-            context.execution_time_ms = int(
-
-                context.execution_time * 1000
-
-            )
+        self._finalize(context)
 
         context.status = "SUCCESS"
 
@@ -97,22 +86,7 @@ class ExecutionLogger:
         Finalize a failed execution.
         """
 
-        context.finished_at = datetime.utcnow()
-
-        if context.started_at:
-
-            context.execution_time = (
-
-                context.finished_at
-                - context.started_at
-
-            ).total_seconds()
-
-            context.execution_time_ms = int(
-
-                context.execution_time * 1000
-
-            )
+        self._finalize(context)
 
         context.status = "FAILED"
 
@@ -140,4 +114,30 @@ class ExecutionLogger:
 
         self.log_service.save_execution(
             context
+        )
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    @staticmethod
+    def _finalize(
+        context: ExecutionContext,
+    ) -> None:
+        """
+        Compute execution duration.
+        """
+
+        context.finished_at = datetime.utcnow()
+
+        if context.started_at is None:
+            return
+
+        context.execution_time = (
+            context.finished_at
+            - context.started_at
+        ).total_seconds()
+
+        context.execution_time_ms = int(
+            context.execution_time * 1000
         )

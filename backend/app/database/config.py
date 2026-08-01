@@ -1,31 +1,84 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
+
 BASE_DIR = Path(__file__).resolve().parents[2]
-load_dotenv(BASE_DIR / ".env")
+
+load_dotenv(
+    dotenv_path=BASE_DIR / ".env",
+)
+
 
 class Settings:
+    """
+    Application configuration loaded from environment variables.
+    """
 
-    IMMO_AI_SERVER = os.getenv("IMMO_AI_SERVER")
-    IMMO_AI_DATABASE = os.getenv("IMMO_AI_DATABASE")
+    def __init__(self) -> None:
 
-    MINISTRY_SERVER = os.getenv("MINISTRY_SERVER")
-    MINISTRY_DATABASE = os.getenv("MINISTRY_DATABASE")
+        # ==========================================================
+        # APPLICATION DATABASE
+        # ==========================================================
 
-    SQL_USERNAME = os.getenv("SQL_USERNAME")
-    SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+        self.IMMO_AI_SERVER: str | None = os.getenv(
+            "IMMO_AI_SERVER",
+        )
 
-    AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+        self.IMMO_AI_DATABASE: str | None = os.getenv(
+            "IMMO_AI_DATABASE",
+        )
 
-    AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+        # ==========================================================
+        # MINISTRY DATABASE
+        # ==========================================================
 
-    AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
+        self.MINISTRY_SERVER: str | None = os.getenv(
+            "MINISTRY_SERVER",
+        )
 
-    AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        self.MINISTRY_DATABASE: str | None = os.getenv(
+            "MINISTRY_DATABASE",
+        )
+
+        # ==========================================================
+        # SQL SERVER
+        # ==========================================================
+
+        self.SQL_USERNAME: str | None = os.getenv(
+            "SQL_USERNAME",
+        )
+
+        self.SQL_PASSWORD: str | None = os.getenv(
+            "SQL_PASSWORD",
+        )
+
+        # ==========================================================
+        # AZURE OPENAI
+        # ==========================================================
+
+        self.AZURE_OPENAI_API_KEY: str | None = os.getenv(
+            "AZURE_OPENAI_API_KEY",
+        )
+
+        self.AZURE_OPENAI_ENDPOINT: str | None = os.getenv(
+            "AZURE_OPENAI_ENDPOINT",
+        )
+
+        self.AZURE_OPENAI_API_VERSION: str | None = os.getenv(
+            "AZURE_OPENAI_API_VERSION",
+        )
+
+        self.AZURE_OPENAI_DEPLOYMENT: str | None = os.getenv(
+            "AZURE_OPENAI_DEPLOYMENT",
+        )
+
 
 settings = Settings()
 
-print("API KEY :", settings.AZURE_OPENAI_API_KEY)
-print("ENDPOINT :", settings.AZURE_OPENAI_ENDPOINT)
-print("API VERSION :", settings.AZURE_OPENAI_API_VERSION)
+
+__all__ = [
+    "Settings",
+    "settings",
+]

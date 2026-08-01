@@ -1,24 +1,32 @@
 from app.agents.sql_agent.patterns.aggregate_patterns import (
     AggregatePatterns,
 )
-
-from app.agents.sql_agent.patterns.ranking_patterns import (
-    RankingPatterns,
-)
-
 from app.agents.sql_agent.patterns.comparison_patterns import (
     ComparisonPatterns,
 )
-
 from app.agents.sql_agent.patterns.evolution_patterns import (
     EvolutionPatterns,
 )
-
 from app.agents.sql_agent.patterns.geographic_patterns import (
     GeographicPatterns,
 )
-
+from app.agents.sql_agent.patterns.ranking_patterns import (
+    RankingPatterns,
+)
 from app.agents.sql_agent.patterns.statistical_patterns import (
+    StatisticalPatterns,
+)
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+PATTERN_FAMILIES = (
+    AggregatePatterns,
+    RankingPatterns,
+    ComparisonPatterns,
+    EvolutionPatterns,
+    GeographicPatterns,
     StatisticalPatterns,
 )
 
@@ -34,49 +42,13 @@ class SQLPatternRepository:
     def __init__(
         self,
     ):
-
-        self.patterns = []
+        self.patterns: list[dict] = []
 
         self._load_patterns()
 
-    # ---------------------------------------------------------
-    # PRIVATE
-    # ---------------------------------------------------------
-
-    def _load_patterns(
-        self,
-    ) -> None:
-        """
-        Load every pattern family.
-        """
-
-        self.patterns.extend(
-            AggregatePatterns.get_patterns()
-        )
-
-        self.patterns.extend(
-            RankingPatterns.get_patterns()
-        )
-
-        self.patterns.extend(
-            ComparisonPatterns.get_patterns()
-        )
-
-        self.patterns.extend(
-            EvolutionPatterns.get_patterns()
-        )
-
-        self.patterns.extend(
-            GeographicPatterns.get_patterns()
-        )
-
-        self.patterns.extend(
-            StatisticalPatterns.get_patterns()
-        )
-
-    # ---------------------------------------------------------
+    # ==========================================================
     # PUBLIC
-    # ---------------------------------------------------------
+    # ==========================================================
 
     def get_all_patterns(
         self,
@@ -92,17 +64,33 @@ class SQLPatternRepository:
         category: str,
     ) -> list[dict]:
         """
-        Return every pattern belonging
-        to a given category.
+        Return every pattern belonging to a category.
         """
 
+        category = category.lower()
+
         return [
-
             pattern
-
             for pattern in self.patterns
-
-            if pattern["category"].lower()
-            == category.lower()
-
+            if pattern.get(
+                "category",
+                "",
+            ).lower()
+            == category
         ]
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _load_patterns(
+        self,
+    ) -> None:
+        """
+        Load every SQL pattern family.
+        """
+
+        for family in PATTERN_FAMILIES:
+            self.patterns.extend(
+                family.get_patterns()
+            )

@@ -95,12 +95,21 @@ class EntityDetector:
 
     }
 
+    def _normalize_text(
+        self,
+        question: str,
+    ) -> str:
+        """
+        Normalize the user question before extraction.
+        """
+        return question.lower()
+
     def detect(
         self,
         question: str,
     ) -> dict:
 
-        text = question.lower()
+        text = self._normalize_text(question)
 
         return {
 
@@ -149,23 +158,13 @@ class EntityDetector:
         text: str,
     ) -> list[tuple[int, int]]:
 
-        ranges = []
-
-        for start, end in re.findall(
-            self.YEAR_RANGE_PATTERN,
-            text,
-        ):
-
-            ranges.append(
-
-                (
-                    int(start),
-                    int(end),
-                )
-
+        return [
+            (int(start), int(end))
+            for start, end in re.findall(
+                self.YEAR_RANGE_PATTERN,
+                text,
             )
-
-        return ranges
+        ]
 
     # -----------------------------------------------------
 
@@ -191,7 +190,7 @@ class EntityDetector:
 
             except ValueError:
 
-                pass
+                continue
 
         return numbers
 
@@ -203,15 +202,15 @@ class EntityDetector:
         vocabulary: set[str],
     ) -> list[str]:
 
-        found = []
+        return sorted({
 
-        for keyword in vocabulary:
+            keyword
 
-            if keyword in text:
+            for keyword in vocabulary
 
-                found.append(keyword)
+            if keyword in text
 
-        return sorted(found)
+        })
 
     # -----------------------------------------------------
 
@@ -220,17 +219,10 @@ class EntityDetector:
         text: str,
     ) -> list[str]:
 
-        products = []
-
-        for value in re.findall(
-            self.PRODUCT_PATTERN,
-            text,
-        ):
-
-            products.append(
-                f"CPJ {value}"
+        return sorted({
+            f"CPJ {value}"
+            for value in re.findall(
+                self.PRODUCT_PATTERN,
+                text,
             )
-
-        return sorted(
-            set(products)
-        )
+        })

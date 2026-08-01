@@ -1,5 +1,5 @@
-from datetime import datetime
-
+from __future__ import annotations
+from datetime import datetime, timezone
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
@@ -18,24 +18,44 @@ from app.audit.audit_models import (
     TableStatistics,
 )
 
-import logging
 
-SYSTEM_SCHEMAS = {
-    "sys",
-    "guest",
-    "INFORMATION_SCHEMA",
-    "db_owner",
-    "db_accessadmin",
-    "db_backupoperator",
-    "db_datareader",
-    "db_datawriter",
-    "db_ddladmin",
-    "db_denydatareader",
-    "db_denydatawriter",
-    "db_securityadmin",
-}
+from typing import Any, Callable
 
-logger = logging.getLogger(__name__)
+from typing import Final
+
+SYSTEM_SCHEMAS: Final[frozenset[str]] = frozenset(
+    {
+        "sys",
+        "guest",
+        "INFORMATION_SCHEMA",
+        "db_owner",
+        "db_accessadmin",
+        "db_backupoperator",
+        "db_datareader",
+        "db_datawriter",
+        "db_ddladmin",
+        "db_denydatareader",
+        "db_denydatawriter",
+        "db_securityadmin",
+    }
+)
+
+TABLE_STATISTICS_QUERY = text("""
+    SELECT
+        s.name AS schema_name,
+        t.name AS table_name,
+        SUM(p.rows) AS row_count
+    FROM sys.tables t
+    JOIN sys.schemas s
+        ON t.schema_id = s.schema_id
+    JOIN sys.partitions p
+        ON t.object_id = p.object_id
+    WHERE p.index_id IN (0,1)
+    GROUP BY s.name, t.name
+    ORDER BY s.name, t.name
+    """)
+
+__all__ = ["DatabaseAuditor"]
 
 
 class DatabaseAuditor:
@@ -48,24 +68,51 @@ class DatabaseAuditor:
         self.db = db
         self.inspector = inspect(db.bind)
 
+    def _user_schemas(self) -> list[str]:
+        return [
+            schema
+            for schema in self.inspector.get_schema_names()
+            if schema not in SYSTEM_SCHEMAS
+        ]
+
+    def _user_tables(
+        self,
+    ) -> list[tuple[str, str]]:
+        """
+        Return every user table.
+        """
+
+        tables: list[tuple[str, str]] = []
+
+        for schema in self._user_schemas():
+
+            for table_name in self.inspector.get_table_names(
+                schema=schema,
+            ):
+
+                tables.append(
+                    (
+                        schema,
+                        table_name,
+                    )
+                )
+
+        return tables
+        
     def _safe_execute(
         self,
-        loader,
+        loader: Callable[[], Any],
         metadata: AuditMetadata,
-        default
-    ):
+        default: Any,
+    ) -> Any:
         """
         Execute a loader safely and record any error.
         """
-
-        logger.info("Loading %s...", loader.__name__)
 
         try:
             return loader()
 
         except Exception as e:
-
-            logger.exception("%s failed.", loader.__name__)
 
             metadata.success = False
 
@@ -79,9 +126,6 @@ class DatabaseAuditor:
         """
         Build the complete audit report.
         """
-
-        logger.info("Starting database audit...")
-
         metadata = self._load_metadata()
 
         try:
@@ -175,13 +219,9 @@ class DatabaseAuditor:
                 table_statistics=table_statistics,
             )
 
-            logger.info("Database audit completed successfully.")
-
             return report
 
         except Exception as e:
-
-            logger.exception("Database audit failed.")
 
             metadata.success = False
             metadata.errors.append(str(e))
@@ -194,7 +234,7 @@ class DatabaseAuditor:
         """
 
         return AuditMetadata(
-            generated_at=datetime.now()
+            generated_at=datetime.now(timezone.utc)
         )
 
     def _load_server(self) -> DatabaseServer:
@@ -227,11 +267,7 @@ class DatabaseAuditor:
 
         schemas = []
 
-        for schema_name in self.inspector.get_schema_names():
-
-            # Ignore SQL Server internal schemas if desired
-            if schema_name in SYSTEM_SCHEMAS:
-                continue
+        for schema_name in self._user_schemas():
 
             schemas.append(
                 Schema(
@@ -248,12 +284,7 @@ class DatabaseAuditor:
 
         tables = []
 
-        for schema in self.inspector.get_schema_names():
-
-            if schema in SYSTEM_SCHEMAS:               
-                continue
-
-            for table_name in self.inspector.get_table_names(schema=schema):
+        for schema, table_name in self._user_tables():
 
                 tables.append(
                     Table(
@@ -275,12 +306,7 @@ class DatabaseAuditor:
 
         columns = []
 
-        for schema in self.inspector.get_schema_names():
-
-            if schema in SYSTEM_SCHEMAS:               
-                continue
-
-            for table_name in self.inspector.get_table_names(schema=schema):
+        for schema, table_name in self._user_tables():
 
                 table_columns = self.inspector.get_columns(
                     table_name,
@@ -288,6 +314,14 @@ class DatabaseAuditor:
                 )
 
                 for column in table_columns:
+
+                    default = column.get("default")
+
+                    default_value = (
+                        str(default)
+                        if default is not None
+                        else None
+                    )
 
                     columns.append(
                         Column(
@@ -297,9 +331,7 @@ class DatabaseAuditor:
                             data_type=str(column["type"]),
                             nullable=column["nullable"],
                             max_length=None,
-                            default_value=str(column.get("default"))
-                            if column.get("default") is not None
-                            else None,
+                            default_value=default_value,
                         )
                     )
 
@@ -319,12 +351,7 @@ class DatabaseAuditor:
 
         primary_keys = []
 
-        for schema in self.inspector.get_schema_names():
-
-            if schema in SYSTEM_SCHEMAS:               
-                continue
-
-            for table_name in self.inspector.get_table_names(schema=schema):
+        for schema, table_name in self._user_tables():
 
                 pk = self.inspector.get_pk_constraint(
                     table_name,
@@ -359,12 +386,7 @@ class DatabaseAuditor:
 
         foreign_keys = []
 
-        for schema in self.inspector.get_schema_names():
-
-            if schema in SYSTEM_SCHEMAS:               
-                continue
-
-            for table_name in self.inspector.get_table_names(schema=schema):
+        for schema, table_name in self._user_tables():
 
                 fks = self.inspector.get_foreign_keys(
                     table_name,
@@ -409,17 +431,16 @@ class DatabaseAuditor:
 
         views = []
 
-        for schema in self.inspector.get_schema_names():
+        for schema in self._user_schemas():
 
-            if schema in SYSTEM_SCHEMAS:
-                continue
-
-            for view_name in self.inspector.get_view_names(schema=schema):
+            for view_name in self.inspector.get_view_names(
+                schema=schema
+            ):
 
                 views.append(
                     View(
                         schema_name=schema,
-                        name=view_name
+                        name=view_name,
                     )
                 )
 
@@ -438,12 +459,7 @@ class DatabaseAuditor:
 
         indexes = []
 
-        for schema in self.inspector.get_schema_names():
-
-            if schema in SYSTEM_SCHEMAS:               
-                continue
-
-            for table_name in self.inspector.get_table_names(schema=schema):
+        for schema, table_name in self._user_tables():
 
                 table_indexes = self.inspector.get_indexes(
                     table_name,
@@ -476,22 +492,9 @@ class DatabaseAuditor:
 
         statistics = []
 
-        query = """
-        SELECT
-            s.name AS schema_name,
-            t.name AS table_name,
-            SUM(p.rows) AS row_count
-        FROM sys.tables t
-        JOIN sys.schemas s
-            ON t.schema_id = s.schema_id
-        JOIN sys.partitions p
-            ON t.object_id = p.object_id
-        WHERE p.index_id IN (0,1)
-        GROUP BY s.name, t.name
-        ORDER BY s.name, t.name
-        """
-
-        result = self.db.execute(text(query))
+        result = self.db.execute(
+            TABLE_STATISTICS_QUERY
+        )
 
         for row in result:
 

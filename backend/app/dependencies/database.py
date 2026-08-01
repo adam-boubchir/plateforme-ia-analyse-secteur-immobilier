@@ -1,3 +1,5 @@
+from collections.abc import Generator
+
 from sqlalchemy.orm import Session
 
 from app.database.session import (
@@ -6,17 +8,15 @@ from app.database.session import (
 )
 
 
-def get_immo_session() -> Session:
+def get_immo_session() -> Generator[Session, None, None]:
     """
-    Dependency returning the IMMO_AI database session.
+    FastAPI dependency providing an IMMO_AI database session.
     """
+    yield from get_immo_db()
 
-    return next(get_immo_db())
 
-
-def get_ministry_session() -> Session:
+def get_ministry_session() -> Generator[Session, None, None]:
     """
-    Dependency returning the Ministry database session.
+    FastAPI dependency providing a Ministry database session.
     """
-
-    return next(get_ministry_db())
+    yield from get_ministry_db()

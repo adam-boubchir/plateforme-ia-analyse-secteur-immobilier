@@ -6,14 +6,20 @@ from sqlalchemy.orm import Session
 class BaseRepository:
     """
     Base repository providing common database operations.
+
+    Responsibilities
+    ----------------
+    • Add entities
+    • Delete entities
+    • Manage transactions
+    • Refresh ORM entities
     """
 
     def __init__(
         self,
         db: Session,
-    ):
-
-        self.db = db
+    ) -> None:
+        self.db: Session = db
 
     # =====================================================
     # CREATE
@@ -24,10 +30,12 @@ class BaseRepository:
         entity: Any,
     ) -> None:
         """
-        Add a single entity to the current session.
+        Add one entity to the current session.
         """
 
-        self.db.add(entity)
+        self.db.add(
+            instance=entity,
+        )
 
     def add_all(
         self,
@@ -37,7 +45,9 @@ class BaseRepository:
         Add multiple entities to the current session.
         """
 
-        self.db.add_all(entities)
+        self.db.add_all(
+            instances=entities,
+        )
 
     # =====================================================
     # TRANSACTION
@@ -56,7 +66,7 @@ class BaseRepository:
         self,
     ) -> None:
         """
-        Commit current transaction.
+        Commit the current transaction.
         """
 
         self.db.commit()
@@ -65,7 +75,7 @@ class BaseRepository:
         self,
     ) -> None:
         """
-        Roll back current transaction.
+        Roll back the current transaction.
         """
 
         self.db.rollback()
@@ -75,10 +85,12 @@ class BaseRepository:
         entity: Any,
     ) -> None:
         """
-        Refresh an entity from the database.
+        Refresh an ORM entity.
         """
 
-        self.db.refresh(entity)
+        self.db.refresh(
+            instance=entity,
+        )
 
     # =====================================================
     # DELETE
@@ -92,4 +104,11 @@ class BaseRepository:
         Delete an entity.
         """
 
-        self.db.delete(entity)
+        self.db.delete(
+            instance=entity,
+        )
+
+
+__all__ = [
+    "BaseRepository",
+]

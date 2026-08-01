@@ -1,11 +1,9 @@
 from app.database.entities.conversation_log import (
     ConversationLog,
 )
-
 from app.database.repositories.conversation_log_repository import (
     ConversationLogRepository,
 )
-
 from app.logging.execution_context import (
     ExecutionContext,
 )
@@ -17,12 +15,14 @@ class LogService:
     SQL Agent execution logs.
     """
 
+    RUNNING_STATUS = "RUNNING"
+
     def __init__(
         self,
         repository: ConversationLogRepository,
-    ):
+    ) -> None:
 
-        self.repository = repository
+        self.repository: ConversationLogRepository = repository
 
     # ==========================================================
     # CREATE
@@ -38,37 +38,14 @@ class LogService:
         """
 
         log = ConversationLog(
-
             conversation_id=conversation_id,
-
             question=question,
-
-            status="RUNNING",
-
+            status=self.RUNNING_STATUS,
         )
 
-        print("\n" + "=" * 100)
-        print("ENTITY BEFORE REPOSITORY")
-        print("=" * 100)
-
-        print("business_knowledge :", repr(log.business_knowledge))
-        print("join_knowledge     :", repr(log.join_knowledge))
-        print("forbidden_joins    :", repr(log.forbidden_joins))
-        print("semantic_context   :", repr(log.semantic_context))
-        print("sql_patterns       :", repr(log.sql_patterns))
-        print("full_context       :", repr(log.full_context))
-
-        print("=" * 100 + "\n")
-
-        saved = self.repository.create(log)
-        
-        print("ID :", saved.id)
-        print("business :", repr(saved.business_knowledge))
-        print("join :", repr(saved.join_knowledge))
-
-        return saved
-    
-    
+        return self.repository.create(
+            log=log,
+        )
 
     # ==========================================================
     # SAVE EXECUTION
@@ -83,74 +60,44 @@ class LogService:
         """
 
         if context.conversation_id is None:
-
             raise ValueError(
                 "conversation_id cannot be None."
             )
 
         log = ConversationLog(
-
             conversation_id=context.conversation_id,
-
             message_id=getattr(
                 context,
                 "message_id",
                 None,
             ),
-
             question=context.question,
-
             selected_tables=context.selected_tables,
-
             business_knowledge=context.business_knowledge,
-
             join_knowledge=context.join_knowledge,
-
             forbidden_joins=context.forbidden_joins,
-
             semantic_context=context.semantic_context,
-
             sql_patterns=getattr(
                 context,
                 "sql_patterns",
                 None,
             ),
-
             full_context=context.full_context,
-
             prompt=context.prompt,
-
             generated_sql=context.generated_sql,
-
             validated_sql=context.validated_sql,
-
             sql_result=context.sql_result,
-
             formatted_answer=context.formatted_answer,
-
             execution_time_ms=context.execution_time_ms,
-
             status=context.status,
-
             error_message=(
                 context.error_message
                 or context.error
             ),
-
         )
 
-        print("=" * 100)
-        print("SAVE EXECUTION")
-
-        print(context.business_knowledge)
-        print(context.join_knowledge)
-        print(context.forbidden_joins)
-        print(context.semantic_context)
-
-        print("=" * 100)
-
         return self.repository.create(
-            log
+            log=log,
         )
 
     # ==========================================================
@@ -167,7 +114,6 @@ class LogService:
         """
 
         for key, value in fields.items():
-
             setattr(
                 log,
                 key,
@@ -175,7 +121,7 @@ class LogService:
             )
 
         return self.repository.update(
-            log
+            log=log,
         )
 
     # ==========================================================
@@ -191,7 +137,7 @@ class LogService:
         """
 
         return self.repository.get_by_id(
-            log_id
+            log_id=log_id,
         )
 
     def get_logs_by_conversation(
@@ -203,7 +149,7 @@ class LogService:
         """
 
         return self.repository.get_by_conversation(
-            conversation_id
+            conversation_id=conversation_id,
         )
 
     def get_last_log(
@@ -215,7 +161,7 @@ class LogService:
         """
 
         return self.repository.get_last_by_conversation(
-            conversation_id
+            conversation_id=conversation_id,
         )
 
     def count_logs(
@@ -227,7 +173,7 @@ class LogService:
         """
 
         return self.repository.count_by_conversation(
-            conversation_id
+            conversation_id=conversation_id,
         )
 
     def get_all_logs(
@@ -252,5 +198,10 @@ class LogService:
         """
 
         self.repository.delete(
-            log
+            log=log,
         )
+
+
+__all__ = [
+    "LogService",
+]

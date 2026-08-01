@@ -2,6 +2,13 @@ from app.agents.sql_agent.patterns.sql_patterns import (
     SQLPatterns,
 )
 
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+SECTION_SEPARATOR = "=" * 100
+PATTERN_SEPARATOR = "-" * 80
+
 
 class SQLPatternBuilder:
     """
@@ -15,7 +22,6 @@ class SQLPatternBuilder:
     def __init__(
         self,
     ):
-
         self.patterns = SQLPatterns()
 
     # ==========================================================
@@ -32,30 +38,21 @@ class SQLPatternBuilder:
         """
 
         selected_patterns = self.patterns.get_patterns(
-
             question=question,
-
             selection=selection,
-
         )
 
-        context = []
-
-        context.append("=" * 100)
-        context.append("")
-        context.append("SQL PATTERNS")
-        context.append("")
+        context = [
+            SECTION_SEPARATOR,
+            "",
+            "SQL PATTERNS",
+            "",
+        ]
 
         if not selected_patterns:
-
-            context.append(
-                "No SQL patterns were selected."
+            context.extend(
+                self._build_empty_section()
             )
-
-            context.append("")
-            context.append("=" * 100)
-            context.append("")
-
             return context
 
         context.append(
@@ -65,27 +62,39 @@ class SQLPatternBuilder:
         context.append("")
 
         for item in selected_patterns:
-
             context.extend(
-
                 self._build_pattern(
-
                     pattern=item["pattern"],
-
                     score=item["score"],
-
                 )
-
             )
 
-        context.append("=" * 100)
-        context.append("")
+        context.extend(
+            [
+                SECTION_SEPARATOR,
+                "",
+            ]
+        )
 
         return context
 
     # ==========================================================
     # PRIVATE
     # ==========================================================
+
+    def _build_empty_section(
+        self,
+    ) -> list[str]:
+        """
+        Build the empty SQL pattern section.
+        """
+
+        return [
+            "No SQL patterns were selected.",
+            "",
+            SECTION_SEPARATOR,
+            "",
+        ]
 
     def _build_pattern(
         self,
@@ -96,16 +105,17 @@ class SQLPatternBuilder:
         Build one SQL pattern.
         """
 
-        context = []
+        context = [
+            f"Pattern : {pattern.get('name', '')}",
+        ]
 
-        context.append(
-            f"Pattern : {pattern['name']}"
+        category = pattern.get(
+            "category",
         )
 
-        if pattern.get("category"):
-
+        if category:
             context.append(
-                f"Category : {pattern['category']}"
+                f"Category : {category}"
             )
 
         context.append(
@@ -113,87 +123,89 @@ class SQLPatternBuilder:
         )
 
         context.append(
-            f"Description : {pattern['description']}"
+            f"Description : {pattern.get('description', '')}"
         )
 
-        # --------------------------------------------------
-
-        functions = pattern.get(
-            "functions",
-            [],
+        context.extend(
+            self._build_list_section(
+                "SQL Functions",
+                pattern.get(
+                    "functions",
+                    [],
+                ),
+            )
         )
 
-        if functions:
-
-            context.append("SQL Functions:")
-
-            for function in functions:
-
-                context.append(
-                    f"  • {function}"
-                )
-
-        # --------------------------------------------------
-
-        keywords = pattern.get(
-            "keywords",
-            [],
+        context.extend(
+            self._build_list_section(
+                "Keywords",
+                pattern.get(
+                    "keywords",
+                    [],
+                ),
+            )
         )
 
-        if keywords:
-
-            context.append("Keywords:")
-
-            for keyword in keywords:
-
-                context.append(
-                    f"  • {keyword}"
-                )
-
-        # --------------------------------------------------
-
-        tables = pattern.get(
-            "tables",
-            [],
+        context.extend(
+            self._build_list_section(
+                "Recommended Tables",
+                pattern.get(
+                    "tables",
+                    [],
+                ),
+            )
         )
-
-        if tables:
-
-            context.append("Recommended Tables:")
-
-            for table in tables:
-
-                context.append(
-                    f"  • {table}"
-                )
-
-        # --------------------------------------------------
-
-        context.append("Recommended SQL:")
 
         context.append(
-
-            pattern["template"].strip()
-
+            "Recommended SQL:"
         )
 
-        # --------------------------------------------------
+        context.append(
+            pattern.get(
+                "template",
+                "",
+            ).strip()
+        )
 
         recommendation = pattern.get(
             "recommendation",
-            "",
         )
 
         if recommendation:
-
-            context.append("Recommendation:")
+            context.append(
+                "Recommendation:"
+            )
 
             context.append(
                 recommendation
             )
 
-        context.append("")
-        context.append("-" * 80)
-        context.append("")
+        context.extend(
+            [
+                "",
+                PATTERN_SEPARATOR,
+                "",
+            ]
+        )
 
         return context
+
+    def _build_list_section(
+        self,
+        title: str,
+        values: list[str],
+    ) -> list[str]:
+        """
+        Build a generic list section.
+        """
+
+        if not values:
+            return []
+
+        return [
+            title + ":",
+            *[
+                f"  • {value}"
+                for value in values
+            ],
+        ]

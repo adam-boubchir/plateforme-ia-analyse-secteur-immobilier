@@ -1,7 +1,6 @@
 from app.agents.sql_agent.patterns.sql_pattern_repository import (
     SQLPatternRepository,
 )
-
 from app.agents.sql_agent.patterns.sql_pattern_selector import (
     SQLPatternSelector,
 )
@@ -18,14 +17,19 @@ class SQLPatterns:
 
     def __init__(
         self,
+        repository: SQLPatternRepository | None = None,
+        selector: SQLPatternSelector | None = None,
     ):
+        self.repository = (
+            repository
+            or SQLPatternRepository()
+        )
 
-        self.repository = SQLPatternRepository()
-
-        self.selector = SQLPatternSelector(
-
-            repository=self.repository,
-
+        self.selector = (
+            selector
+            or SQLPatternSelector(
+                repository=self.repository,
+            )
         )
 
     # ==========================================================
@@ -43,9 +47,6 @@ class SQLPatterns:
         """
 
         return self.selector.select(
-
             question=question,
-
             selection=selection,
-
         )

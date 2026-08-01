@@ -1,37 +1,30 @@
+from __future__ import annotations
+
 from app.database.session import SessionLocal
+from app.metadata.metadata_extractor import MetadataExtractor
+from app.metadata.metadata_loader import MetadataLoader
+from app.metadata.metadata_models import MetadataLoadResult
 
-from app.metadata.metadata_extractor import (
-    MetadataExtractor
-)
-
-from app.metadata.metadata_loader import (
-    MetadataLoader
-)
-
-from app.metadata.metadata_models import (
-    MetadataLoadResult
-)
+__all__ = ["MetadataScheduler"]
 
 
 class MetadataScheduler:
+    """
+    Orchestrates metadata extraction and loading.
+    """
 
-    def __init__(self):
-
+    def __init__(self) -> None:
         self.extractor = MetadataExtractor()
 
     def run(self) -> MetadataLoadResult:
+        """
+        Execute the complete metadata synchronization pipeline.
+        """
 
         db = SessionLocal()
 
         try:
-
             loader = MetadataLoader(db)
-
-            global_result = MetadataLoadResult()
-
-            # ==========================
-            # Extraction
-            # ==========================
 
             tables = self.extractor.extract_tables()
 
@@ -41,16 +34,11 @@ class MetadataScheduler:
                 self.extractor.extract_relationships()
             )
 
-            # ==========================
-            # Chargement
-            # ==========================
-
             return loader.load(
                 tables=tables,
                 columns=columns,
-                relationships=relationships
+                relationships=relationships,
             )
 
         finally:
-
             db.close()

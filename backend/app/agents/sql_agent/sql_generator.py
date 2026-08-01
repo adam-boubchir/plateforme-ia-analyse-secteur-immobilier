@@ -1,29 +1,43 @@
+from __future__ import annotations
+
 import re
 
-from app.services.llm_service import (
-    LLMService,
+from app.services.llm_service import LLMService
+
+__all__ = ["SQLGenerator"]
+
+
+CANNOT_GENERATE_SQL = "CANNOT_GENERATE_SQL"
+
+MARKDOWN_SQL_REGEX = r"```sql"
+
+SQL_REGEX = r"(SELECT|WITH)\b.*"
+
+SQL_PREFIXES = (
+    "SQL:",
+    "Sql:",
+    "sql:",
 )
+
+AGENT_NAME = "sql_agent"
 
 
 class SQLGenerator:
     """
-    Responsible for generating SQL from the LLM.
-
-    This class acts as a bridge between the SQL Agent
-    and the LLM.
+    Generate a SQL query from the LLM response.
 
     Responsibilities
     ----------------
-    • Send the prompt
-    • Retrieve the response
-    • Clean the response
-    • Extract the SQL query
+    - Send the prompt to the LLM.
+    - Extract the SQL statement from the response.
+    - Remove Markdown and formatting artifacts.
+    - Return a normalized SQL query.
     """
 
     def __init__(
         self,
         llm_service: LLMService,
-    ):
+    ) -> None:
 
         self.llm_service = llm_service
 
@@ -36,26 +50,21 @@ class SQLGenerator:
         prompt: str,
     ) -> str:
         """
-        Generate SQL from the prompt.
+        Generate a SQL query from the given prompt.
         """
 
         response = self.llm_service.generate(
-
-            agent_name="sql_agent",
-
+            agent_name=AGENT_NAME,
             prompt=prompt,
-
         )
 
-        self._print_raw_response(
-            response
+        self._display_raw_response(
+            response,
         )
 
-        sql = self._extract_sql(
-            response
+        return self._extract_sql(
+            response,
         )
-
-        return sql
 
     # ==========================================================
     # PRIVATE
@@ -63,119 +72,120 @@ class SQLGenerator:
 
     def _extract_sql(
         self,
+        response: str | None,
+    ) -> str:
+        """
+        Extract and normalize the SQL statement returned by the LLM.
+        """
+
+        if not response:
+            return ""
+
+        response = response.strip()
+
+        if response.upper() == CANNOT_GENERATE_SQL:
+            return CANNOT_GENERATE_SQL
+
+        response = self._remove_markdown(
+            response,
+        )
+
+        response = self._remove_prefixes(
+            response,
+        )
+
+        response = self._extract_statement(
+            response,
+        )
+
+        return self._normalize_sql(
+            response,
+        )
+
+    def _remove_markdown(
+        self,
         response: str,
     ) -> str:
         """
-        Clean the LLM response and extract SQL.
+        Remove Markdown code fences.
         """
 
-        if response is None:
-
-            return ""
-
-        response = response.strip()
-
-        if response == "":
-
-            return ""
-
-        # ------------------------------------------------------
-        # Impossible question
-        # ------------------------------------------------------
-
-        if response.upper() == "CANNOT_GENERATE_SQL":
-
-            return "CANNOT_GENERATE_SQL"
-
-        # ------------------------------------------------------
-        # Remove Markdown
-        # ------------------------------------------------------
-
         response = re.sub(
-
-            r"```sql",
-
+            MARKDOWN_SQL_REGEX,
             "",
-
             response,
-
             flags=re.IGNORECASE,
-
         )
 
-        response = response.replace(
+        return response.replace(
             "```",
             "",
-        )
+        ).strip()
 
-        response = response.strip()
+    def _remove_prefixes(
+        self,
+        response: str,
+    ) -> str:
+        """
+        Remove common SQL prefixes.
+        """
 
-        # ------------------------------------------------------
-        # Remove useless prefixes
-        # ------------------------------------------------------
-
-        prefixes = [
-
-            "SQL:",
-
-            "Sql:",
-
-            "sql:",
-
-        ]
-
-        for prefix in prefixes:
+        for prefix in SQL_PREFIXES:
 
             if response.startswith(prefix):
 
-                response = response[
-                    len(prefix):
-                ].strip()
+                return response[len(prefix):].strip()
 
-        # ------------------------------------------------------
-        # Keep only SQL
-        # ------------------------------------------------------
+        return response
+
+    def _extract_statement(
+        self,
+        response: str,
+    ) -> str:
+        """
+        Extract the SQL statement from the LLM response.
+        """
 
         match = re.search(
-
-            r"(SELECT|WITH)\b.*",
-
+            SQL_REGEX,
             response,
-
             flags=re.IGNORECASE | re.DOTALL,
-
         )
 
         if match:
 
-            response = match.group(0)
-
-        response = response.strip()
-
-        if response.endswith(";"):
-
-            response = response[:-1].strip()
+            return match.group(0)
 
         return response
 
-    def _print_raw_response(
+    def _normalize_sql(
+        self,
+        sql: str,
+    ) -> str:
+        """
+        Normalize the SQL statement.
+        """
+
+        sql = sql.strip()
+
+        if sql.endswith(";"):
+
+            sql = sql[:-1]
+
+        return sql.strip()
+
+    def _display_raw_response(
         self,
         response: str,
     ) -> None:
         """
-        Print raw LLM output.
+        Display the raw LLM response for debugging purposes.
         """
 
         print()
-
         print("=" * 100)
-
         print("RAW LLM RESPONSE")
-
         print("=" * 100)
-
         print(response)
-
         print("=" * 100)
-
         print()

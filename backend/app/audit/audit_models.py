@@ -2,13 +2,28 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+__all__ = [
+    "AuditMetadata",
+    "DatabaseServer",
+    "DatabaseStatistics",
+    "Schema",
+    "Table",
+    "View",
+    "Column",
+    "PrimaryKey",
+    "ForeignKey",
+    "Index",
+    "TableStatistics",
+    "AuditReport",
+]
 
 
 class AuditMetadata(BaseModel):
-    """
-    Metadata about the audit execution.
-    """
+    """Metadata about the audit execution."""
+
+    model_config = ConfigDict(extra="forbid")
 
     generated_at: datetime
     duration_ms: int = 0
@@ -19,9 +34,9 @@ class AuditMetadata(BaseModel):
 
 
 class DatabaseServer(BaseModel):
-    """
-    Information about the SQL Server instance.
-    """
+    """Information about the SQL Server instance."""
+
+    model_config = ConfigDict(extra="forbid")
 
     server_name: str
     database_name: str
@@ -32,9 +47,9 @@ class DatabaseServer(BaseModel):
 
 
 class DatabaseStatistics(BaseModel):
-    """
-    Global statistics of the database.
-    """
+    """Global database statistics."""
+
+    model_config = ConfigDict(extra="forbid")
 
     total_tables: int = 0
     total_views: int = 0
@@ -46,17 +61,17 @@ class DatabaseStatistics(BaseModel):
 
 
 class Schema(BaseModel):
-    """
-    Represents a database schema.
-    """
+    """Database schema."""
+
+    model_config = ConfigDict(extra="forbid")
 
     name: str
 
 
 class Table(BaseModel):
-    """
-    Represents a database table.
-    """
+    """Database table."""
+
+    model_config = ConfigDict(extra="forbid")
 
     schema_name: str
     name: str
@@ -65,25 +80,24 @@ class Table(BaseModel):
 
 
 class View(BaseModel):
-    """
-    Represents a database view.
-    """
+    """Database view."""
+
+    model_config = ConfigDict(extra="forbid")
 
     schema_name: str
     name: str
 
 
 class Column(BaseModel):
-    """
-    Represents a database column.
-    """
+    """Database column."""
+
+    model_config = ConfigDict(extra="forbid")
 
     schema_name: str
     table: str
     name: str
 
     data_type: str
-
     nullable: bool
 
     max_length: int | None = None
@@ -91,9 +105,9 @@ class Column(BaseModel):
 
 
 class PrimaryKey(BaseModel):
-    """
-    Represents a primary key.
-    """
+    """Primary key."""
+
+    model_config = ConfigDict(extra="forbid")
 
     schema_name: str
     table: str
@@ -101,9 +115,9 @@ class PrimaryKey(BaseModel):
 
 
 class ForeignKey(BaseModel):
-    """
-    Represents a foreign key relationship.
-    """
+    """Foreign key relationship."""
+
+    model_config = ConfigDict(extra="forbid")
 
     constraint_name: str
 
@@ -117,9 +131,9 @@ class ForeignKey(BaseModel):
 
 
 class Index(BaseModel):
-    """
-    Represents a database index.
-    """
+    """Database index."""
+
+    model_config = ConfigDict(extra="forbid")
 
     table: str
     name: str
@@ -128,9 +142,9 @@ class Index(BaseModel):
 
 
 class TableStatistics(BaseModel):
-    """
-    Statistics for one database table.
-    """
+    """Statistics for a database table."""
+
+    model_config = ConfigDict(extra="forbid")
 
     schema_name: str
     table: str
@@ -140,28 +154,19 @@ class TableStatistics(BaseModel):
 
 
 class AuditReport(BaseModel):
-    """
-    Complete database audit report.
-    """
+    """Complete database audit report."""
+
+    model_config = ConfigDict(extra="forbid")
 
     metadata: AuditMetadata
-
     server: DatabaseServer
-
     statistics: DatabaseStatistics
 
     schemas: list[Schema] = Field(default_factory=list)
-
     tables: list[Table] = Field(default_factory=list)
-
     views: list[View] = Field(default_factory=list)
-
     columns: list[Column] = Field(default_factory=list)
-
     primary_keys: list[PrimaryKey] = Field(default_factory=list)
-
     foreign_keys: list[ForeignKey] = Field(default_factory=list)
-
     indexes: list[Index] = Field(default_factory=list)
-
     table_statistics: list[TableStatistics] = Field(default_factory=list)

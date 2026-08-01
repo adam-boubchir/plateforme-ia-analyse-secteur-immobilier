@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from app.database.entities.conversation import (
     Conversation,
 )
-
 from app.database.repositories.base_repository import (
     BaseRepository,
 )
@@ -18,9 +17,8 @@ class ConversationRepository(BaseRepository):
     def __init__(
         self,
         db: Session,
-    ):
-
-        super().__init__(db)
+    ) -> None:
+        super().__init__(db=db)
 
     # ==========================================================
     # CREATE
@@ -35,7 +33,7 @@ class ConversationRepository(BaseRepository):
         """
 
         self.add(
-            conversation
+            entity=conversation,
         )
 
         self.flush()
@@ -54,14 +52,16 @@ class ConversationRepository(BaseRepository):
         Retrieve a conversation by its ID.
         """
 
-        return self.db.scalar(
-
+        statement = (
             select(
-                Conversation
+                Conversation,
             ).where(
-                Conversation.id == conversation_id
+                Conversation.id == conversation_id,
             )
+        )
 
+        return self.db.scalar(
+            statement,
         )
 
     def get_by_uuid(
@@ -72,15 +72,16 @@ class ConversationRepository(BaseRepository):
         Retrieve a conversation by its UUID.
         """
 
-        return self.db.scalar(
-
+        statement = (
             select(
-                Conversation
+                Conversation,
             ).where(
-                Conversation.conversation_uuid
-                == conversation_uuid
+                Conversation.conversation_uuid == conversation_uuid,
             )
+        )
 
+        return self.db.scalar(
+            statement,
         )
 
     def get_all(
@@ -90,18 +91,18 @@ class ConversationRepository(BaseRepository):
         Retrieve every conversation ordered by last activity.
         """
 
-        return list(
-
-            self.db.scalars(
-
-                select(
-                    Conversation
-                ).order_by(
-                    Conversation.last_message_at.desc()
-                )
-
+        statement = (
+            select(
+                Conversation,
+            ).order_by(
+                Conversation.last_message_at.desc(),
             )
+        )
 
+        return list(
+            self.db.scalars(
+                statement,
+            )
         )
 
     # ==========================================================
@@ -113,7 +114,7 @@ class ConversationRepository(BaseRepository):
         conversation: Conversation,
     ) -> Conversation:
         """
-        Flush pending changes.
+        Flush pending modifications.
         """
 
         self.flush()
@@ -133,5 +134,10 @@ class ConversationRepository(BaseRepository):
         """
 
         self.db.delete(
-            conversation
+            instance=conversation,
         )
+
+
+__all__ = [
+    "ConversationRepository",
+]

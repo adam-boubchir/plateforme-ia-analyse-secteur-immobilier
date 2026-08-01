@@ -2,4 +2,13 @@ from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
+    """
+    Base class for all SQLAlchemy ORM entities.
+    """
+
     pass
+
+
+__all__ = [
+    "Base",
+]

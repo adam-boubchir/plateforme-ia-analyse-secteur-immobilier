@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.database.entities.conversation_message import (
     ConversationMessage,
 )
-
 from app.database.repositories.base_repository import (
     BaseRepository,
 )
@@ -21,9 +20,8 @@ class ConversationMessageRepository(BaseRepository):
     def __init__(
         self,
         db: Session,
-    ):
-
-        super().__init__(db)
+    ) -> None:
+        super().__init__(db=db)
 
     # ==========================================================
     # CREATE
@@ -38,7 +36,7 @@ class ConversationMessageRepository(BaseRepository):
         """
 
         self.add(
-            message
+            entity=message,
         )
 
         self.flush()
@@ -57,14 +55,16 @@ class ConversationMessageRepository(BaseRepository):
         Retrieve one message by its ID.
         """
 
-        return self.db.scalar(
-
+        statement = (
             select(
-                ConversationMessage
+                ConversationMessage,
             ).where(
-                ConversationMessage.id == message_id
+                ConversationMessage.id == message_id,
             )
+        )
 
+        return self.db.scalar(
+            statement,
         )
 
     def get_by_conversation(
@@ -75,25 +75,22 @@ class ConversationMessageRepository(BaseRepository):
         Retrieve all messages of one conversation.
         """
 
-        return list(
-
-            self.db.scalars(
-
-                select(
-                    ConversationMessage
-                )
-
-                .where(
-                    ConversationMessage.conversation_id
-                    == conversation_id
-                )
-
-                .order_by(
-                    ConversationMessage.created_at.asc()
-                )
-
+        statement = (
+            select(
+                ConversationMessage,
             )
+            .where(
+                ConversationMessage.conversation_id == conversation_id,
+            )
+            .order_by(
+                ConversationMessage.created_at.asc(),
+            )
+        )
 
+        return list(
+            self.db.scalars(
+                statement,
+            )
         )
 
     def count_messages(
@@ -104,21 +101,20 @@ class ConversationMessageRepository(BaseRepository):
         Return the number of messages of one conversation.
         """
 
-        return self.db.scalar(
-
+        statement = (
             select(
-                func.count()
+                func.count(),
             )
-
             .select_from(
-                ConversationMessage
+                ConversationMessage,
             )
-
             .where(
-                ConversationMessage.conversation_id
-                == conversation_id
+                ConversationMessage.conversation_id == conversation_id,
             )
+        )
 
+        return self.db.scalar(
+            statement,
         ) or 0
 
     # ==========================================================
@@ -150,5 +146,10 @@ class ConversationMessageRepository(BaseRepository):
         """
 
         self.db.delete(
-            message
+            message,
         )
+
+
+__all__ = [
+    "ConversationMessageRepository",
+]

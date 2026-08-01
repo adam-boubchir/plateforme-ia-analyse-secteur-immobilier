@@ -1,6 +1,21 @@
-from app.knowledge.database_knowledge import (
-    DATABASE_KNOWLEDGE,
-)
+from __future__ import annotations
+
+from typing import Any
+
+from app.knowledge.database_knowledge import DATABASE_KNOWLEDGE
+
+__all__ = ["BusinessKnowledgeBuilder"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+SECTION_SEPARATOR = "=" * 80
+SECTION_TITLE = "BUSINESS KNOWLEDGE"
+
+USED_FOR_TITLE = "Used For:"
+NEVER_USE_FOR_TITLE = "Never Use For:"
+IMPORTANT_COLUMNS_TITLE = "Important Columns:"
 
 
 class BusinessKnowledgeBuilder:
@@ -12,6 +27,10 @@ class BusinessKnowledgeBuilder:
     the role of every selected table.
     """
 
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
+
     def build(
         self,
         selected_tables: list[str],
@@ -21,21 +40,19 @@ class BusinessKnowledgeBuilder:
         the selected tables.
         """
 
-        context = []
-
-        context.append("=" * 80)
-        context.append("")
-        context.append("BUSINESS KNOWLEDGE")
-        context.append("")
+        context = [
+            SECTION_SEPARATOR,
+            "",
+            SECTION_TITLE,
+            "",
+        ]
 
         for table_name in selected_tables:
 
-            if table_name not in DATABASE_KNOWLEDGE:
-                continue
+            knowledge = DATABASE_KNOWLEDGE.get(table_name)
 
-            knowledge = DATABASE_KNOWLEDGE[
-                table_name
-            ]
+            if knowledge is None:
+                continue
 
             context.extend(
                 self._build_table_context(
@@ -46,74 +63,61 @@ class BusinessKnowledgeBuilder:
 
         return context
 
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
     def _build_table_context(
         self,
         table_name: str,
-        knowledge: dict,
+        knowledge: dict[str, Any],
     ) -> list[str]:
         """
         Build the business description of one table.
         """
 
-        context = []
+        context = [
+            f"Table : {table_name}",
+            f"Business Name : {knowledge['business_name']}",
+            f"Description : {knowledge['description']}",
+        ]
 
-        context.append(f"Table : {table_name}")
-
-        context.append(
-            f"Business Name : {knowledge['business_name']}"
+        self._append_section(
+            context,
+            USED_FOR_TITLE,
+            knowledge.get("used_for", ()),
         )
 
-        context.append(
-            f"Description : {knowledge['description']}"
+        self._append_section(
+            context,
+            NEVER_USE_FOR_TITLE,
+            knowledge.get("never_use_for", ()),
         )
 
-        used_for = knowledge.get(
-            "used_for",
-            [],
+        self._append_section(
+            context,
+            IMPORTANT_COLUMNS_TITLE,
+            knowledge.get("main_columns", ()),
         )
-
-        if used_for:
-
-            context.append("Used For:")
-
-            for value in used_for:
-
-                context.append(
-                    f"  - {value}"
-                )
-
-        never_use_for = knowledge.get(
-            "never_use_for",
-            [],
-        )
-
-        if never_use_for:
-
-            context.append("Never Use For:")
-
-            for value in never_use_for:
-
-                context.append(
-                    f"  - {value}"
-                )
-
-        main_columns = knowledge.get(
-            "main_columns",
-            [],
-        )
-
-        if main_columns:
-
-            context.append(
-                "Important Columns:"
-            )
-
-            for column in main_columns:
-
-                context.append(
-                    f"  - {column}"
-                )
 
         context.append("")
 
         return context
+
+    def _append_section(
+        self,
+        context: list[str],
+        title: str,
+        values: tuple[str, ...] | list[str],
+    ) -> None:
+        """
+        Append a titled bullet-list section.
+        """
+
+        if not values:
+            return
+
+        context.append(title)
+
+        for value in values:
+            context.append(f"  - {value}")

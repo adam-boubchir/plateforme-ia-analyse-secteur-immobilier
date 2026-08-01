@@ -35,9 +35,10 @@ SELECT
     AVG(f.Valeur) AS PrixMoyen
 FROM FACT_PRIX_INDICES f
 INNER JOIN NIVEAU_MATERIAU m
-ON f.IdNiveauMateriau = m.IdNiveauMateriau
+INNER JOIN NIVEAU_MATERIAU m
+    ON f.IdNiveauMateriau = m.IdNiveauMateriau
 WHERE m.Libelle = 'Ciment'
-"""
+""".strip(),
     },
 
     # ==========================================================
@@ -64,11 +65,11 @@ ON f.IdRegion = r.IdRegion
 INNER JOIN NIVEAU_MATERIAU m
 ON f.IdNiveauMateriau = m.IdNiveauMateriau
 WHERE
-    r.LibelleRegion='Casablanca-Settat'
-AND
-    m.Libelle='Ciment'
-GROUP BY r.LibelleRegion
-"""
+    r.LibelleRegion = 'Casablanca-Settat'
+    AND m.Libelle = 'Ciment'
+GROUP BY 
+    r.LibelleRegion
+""".strip(),
     },
 
     # ==========================================================
@@ -96,12 +97,13 @@ FROM FACT_PRIX_INDICES f
 
 INNER JOIN REGION r
 
-ON f.IdRegion=r.IdRegion
+ON f.IdRegion = r.IdRegion
 
 GROUP BY r.LibelleRegion
 
-ORDER BY PrixMoyen DESC
-"""
+ORDER BY 
+    PrixMoyen DESC
+""".strip(),
     },
 
     # ==========================================================
@@ -131,12 +133,13 @@ INNER JOIN NIVEAU_MATERIAU m
 
 ON f.IdNiveauMateriau=m.IdNiveauMateriau
 
-WHERE m.Libelle='Ciment'
+WHERE 
+    m.Libelle = 'Ciment'
 
 GROUP BY f.Annee
 
 ORDER BY f.Annee
-"""
+""".strip(),
     },
 
     # ==========================================================
@@ -158,8 +161,8 @@ SELECT
 
 COUNT(*) AS NombreLogements
 
-FROM FACT_INDICATEUR_HABITAT
-"""
+FROM FACT_INDICATEUR_HABITAT f
+""".strip(),
     },
 
     # ==========================================================
@@ -178,10 +181,10 @@ FROM FACT_INDICATEUR_HABITAT
         "sql": """
 SELECT
 
-MAX(Valeur) AS PrixMaximum
+    MAX(f.Valeur) AS PrixMaximum
 
-FROM FACT_PRIX_INDICES
-"""
+FROM FACT_PRIX_INDICES f
+""".strip(),
     },
 
     # ==========================================================
@@ -200,10 +203,10 @@ FROM FACT_PRIX_INDICES
         "sql": """
 SELECT
 
-MIN(Valeur) AS PrixMinimum
+MIN(f.Valeur) AS PrixMinimum
 
-FROM FACT_PRIX_INDICES
-"""
+FROM FACT_PRIX_INDICES f
+""".strip(),
     },
 
 ]

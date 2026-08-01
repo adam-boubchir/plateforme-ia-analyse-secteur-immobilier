@@ -11,9 +11,6 @@ from pydantic import BaseModel, Field
 class ModelConfig(BaseModel):
     """
     Configuration of an AI model.
-
-    One instance corresponds to one configured
-    model in the database.
     """
 
     agent_name: str
@@ -46,30 +43,12 @@ class ModelConfig(BaseModel):
 
 
 # ==========================================================
-# AGENT EXECUTION RESULT
-# ==========================================================
-
-class AgentExecutionResult(BaseModel):
-    """
-    Generic execution result returned by every AI Agent.
-    """
-
-    success: bool
-
-    result: Any = None
-
-    error: str | None = None
-
-    execution_time_ms: float = 0
-
-
-# ==========================================================
 # LLM METADATA
 # ==========================================================
 
 class LLMMetadata(BaseModel):
     """
-    Metadata returned by the provider.
+    Metadata returned by the LLM provider.
     """
 
     provider: str
@@ -123,3 +102,43 @@ class AgentMetadata(BaseModel):
     success: bool = True
 
     error: str | None = None
+
+
+# ==========================================================
+# AGENT RESPONSE
+# ==========================================================
+
+class AgentResponse(BaseModel):
+    """
+    Standard response returned by every AI agent.
+    """
+
+    success: bool = True
+
+    content: str
+
+    metadata: AgentMetadata | None = None
+
+    llm: LLMMetadata | None = None
+
+    data: Any = None
+
+    error: str | None = None
+
+
+# ==========================================================
+# AGENT EXECUTION RESULT
+# ==========================================================
+
+class AgentExecutionResult(BaseModel):
+    """
+    Internal execution result.
+    """
+
+    success: bool
+
+    result: Any = None
+
+    error: str | None = None
+
+    execution_time_ms: float = 0

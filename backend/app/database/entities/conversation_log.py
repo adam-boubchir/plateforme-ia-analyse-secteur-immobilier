@@ -1,11 +1,16 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    Column,
+    BigInteger,
     DateTime,
     ForeignKey,
     Integer,
     Text,
+    func,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
 )
 
 from app.database.entities.base import Base
@@ -13,144 +18,153 @@ from app.database.entities.base import Base
 
 class ConversationLog(Base):
     """
-    Stores the complete execution trace of one SQL Agent request.
+    ORM entity storing the complete execution trace
+    of one AI request.
 
     One log corresponds to one user question.
     """
 
     __tablename__ = "conversation_logs"
 
-    id = Column(
-        Integer,
+    # ==========================================================
+    # IDENTIFICATION
+    # ==========================================================
+
+    id: Mapped[int] = mapped_column(
+        BigInteger,
         primary_key=True,
+        autoincrement=True,
         index=True,
     )
 
-    conversation_id = Column(
-        Integer,
+    conversation_id: Mapped[int] = mapped_column(
         ForeignKey("conversations.id"),
         nullable=False,
         index=True,
     )
 
-    message_id = Column(
-        Integer,
+    message_id: Mapped[int | None] = mapped_column(
         ForeignKey("conversation_messages.id"),
         nullable=True,
         index=True,
     )
 
-    # -------------------------------
-    # User Question
-    # -------------------------------
+    # ==========================================================
+    # USER QUESTION
+    # ==========================================================
 
-    question = Column(
+    question: Mapped[str] = mapped_column(
         Text,
         nullable=False,
     )
 
-    # -------------------------------
-    # Context Generation
-    # -------------------------------
+    # ==========================================================
+    # CONTEXT GENERATION
+    # ==========================================================
 
-    selected_tables = Column(
+    selected_tables: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    business_knowledge = Column(
+    business_knowledge: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    join_knowledge = Column(
+    join_knowledge: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    forbidden_joins = Column(
+    forbidden_joins: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    semantic_context = Column(
+    semantic_context: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    sql_patterns = Column(
+    sql_patterns: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    full_context = Column(
+    full_context: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    # -------------------------------
-    # Prompt
-    # -------------------------------
+    # ==========================================================
+    # PROMPT
+    # ==========================================================
 
-    prompt = Column(
+    prompt: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    # -------------------------------
-    # SQL Generation
-    # -------------------------------
+    # ==========================================================
+    # SQL GENERATION
+    # ==========================================================
 
-    generated_sql = Column(
+    generated_sql: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    validated_sql = Column(
+    validated_sql: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    # -------------------------------
-    # SQL Result
-    # -------------------------------
+    # ==========================================================
+    # SQL RESULT
+    # ==========================================================
 
-    sql_result = Column(
+    sql_result: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    formatted_answer = Column(
+    formatted_answer: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    # -------------------------------
-    # Execution Information
-    # -------------------------------
+    # ==========================================================
+    # EXECUTION
+    # ==========================================================
 
-    execution_time_ms = Column(
+    execution_time_ms: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
 
-    status = Column(
+    status: Mapped[str] = mapped_column(
         Text,
         nullable=False,
         default="SUCCESS",
     )
 
-    error_message = Column(
+    error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    # -------------------------------
-    # Audit
-    # -------------------------------
+    # ==========================================================
+    # AUDIT
+    # ==========================================================
 
-    created_at = Column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
         nullable=False,
+        server_default=func.now(),
     )
+
+
+__all__ = [
+    "ConversationLog",
+]

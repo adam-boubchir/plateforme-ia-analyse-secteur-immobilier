@@ -3,7 +3,6 @@ import requests
 from app.models.agent_models import (
     ModelConfig,
 )
-
 from app.services.providers.base_provider import (
     BaseProvider,
 )
@@ -11,7 +10,7 @@ from app.services.providers.base_provider import (
 
 class OllamaProvider(BaseProvider):
     """
-    Ollama Provider.
+    Ollama provider.
 
     Responsible for communicating with a local
     Ollama server.
@@ -33,98 +32,38 @@ class OllamaProvider(BaseProvider):
         Generate a response using Ollama.
         """
 
-        self._print_configuration(
-            config
-        )
-
-        payload = {
-
+        payload: dict = {
             "model": config.model_name,
-
             "prompt": prompt,
-
             "stream": False,
-
             "options": {
-
                 "temperature": config.temperature,
-
                 "top_p": config.top_p,
-
             },
-
         }
 
         try:
-
             response = requests.post(
-
                 url=f"{config.api_base_url}/api/generate",
-
                 json=payload,
-
                 timeout=config.timeout_seconds,
-
             )
 
             response.raise_for_status()
 
-            data = response.json()
-
-            return data.get(
-                "response",
-                "",
-            ).strip()
-
         except requests.RequestException as ex:
-
             raise RuntimeError(
-
-                f"Ollama error: {str(ex)}"
-
+                f"Ollama error: {ex}"
             ) from ex
 
-    # ==========================================================
-    # PRIVATE
-    # ==========================================================
+        data: dict = response.json()
 
-    def _print_configuration(
-        self,
-        config: ModelConfig,
-    ) -> None:
+        return data.get(
+            "response",
+            "",
+        ).strip()
 
-        print()
 
-        print("=" * 100)
-
-        print("OLLAMA CONFIGURATION")
-
-        print("=" * 100)
-
-        print(
-            f"Provider    : {config.provider}"
-        )
-
-        print(
-            f"Model       : {config.model_name}"
-        )
-
-        print(
-            f"Endpoint    : {config.api_base_url}"
-        )
-
-        print(
-            f"Temperature : {config.temperature}"
-        )
-
-        print(
-            f"Top P       : {config.top_p}"
-        )
-
-        print(
-            f"Timeout     : {config.timeout_seconds}"
-        )
-
-        print("=" * 100)
-
-        print()
+__all__ = [
+    "OllamaProvider",
+]

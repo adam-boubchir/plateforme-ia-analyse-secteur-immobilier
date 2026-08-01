@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.services.metadata_service import (
     MetadataService,
 )
@@ -46,6 +48,8 @@ from .prompt_rules_builder import (
     PromptRulesBuilder,
 )
 
+from typing import Any
+
 
 class SQLContextBuilder:
     """
@@ -57,54 +61,37 @@ class SQLContextBuilder:
 
     def __init__(
         self,
-        metadata_service: MetadataService,
-        semantic_context_service: SemanticContextService,
+        header_builder: HeaderBuilder,
+        business_knowledge_builder: BusinessKnowledgeBuilder,
+        join_knowledge_builder: JoinKnowledgeBuilder,
+        forbidden_join_builder: ForbiddenJoinBuilder,
+        business_rules_builder: BusinessRulesBuilder,
+        sql_pattern_builder: SQLPatternBuilder,
+        table_builder: TableContextBuilder,
+        relationship_builder: RelationshipContextBuilder,
+        semantic_builder: SemanticContextBuilder,
+        prompt_rules_builder: PromptRulesBuilder,
     ):
 
-        self.header_builder = HeaderBuilder()
+        self.header_builder = header_builder
 
-        self.business_knowledge_builder = (
-            BusinessKnowledgeBuilder()
-        )
+        self.business_knowledge_builder = business_knowledge_builder
 
-        self.join_knowledge_builder = (
-            JoinKnowledgeBuilder()
-        )
+        self.join_knowledge_builder = join_knowledge_builder
 
-        self.forbidden_join_builder = (
-            ForbiddenJoinBuilder()
-        )
+        self.forbidden_join_builder = forbidden_join_builder
 
-        self.business_rules_builder = (
-            BusinessRulesBuilder()
-        )
+        self.business_rules_builder = business_rules_builder
 
-        self.sql_pattern_builder = (
-            SQLPatternBuilder()
-        )
+        self.sql_pattern_builder = sql_pattern_builder
 
-        self.table_builder = (
-            TableContextBuilder(
-                metadata_service
-            )
-        )
+        self.table_builder = table_builder
 
-        self.relationship_builder = (
-            RelationshipContextBuilder(
-                metadata_service
-            )
-        )
+        self.relationship_builder = relationship_builder
 
-        self.semantic_builder = (
-            SemanticContextBuilder(
-                semantic_context_service
-            )
-        )
+        self.semantic_builder = semantic_builder
 
-        self.prompt_rules_builder = (
-            PromptRulesBuilder()
-        )
-
+        self.prompt_rules_builder = prompt_rules_builder
     # ==========================================================
     # PUBLIC
     # ==========================================================
@@ -112,127 +99,72 @@ class SQLContextBuilder:
     def build_context(
         self,
         question: str,
-        selection: dict,
-    ) -> dict:
-        """
-        Build every context section independently
-        and also return the complete context.
-        """
+        selection: dict[str, Any],
+    ) -> dict[str, str]:
 
-        selected_tables = selection["tables"]
+        selected_tables = selection.get("tables", [])
 
-        print("\n")
-        print("=" * 100)
-        print("KNOWLEDGE SELECTION")
-        print("=" * 100)
-        print(selection)
-        print("=" * 100)
-        print("\n")
-
-        # ------------------------------------------------------
-        # Build every section
-        # ------------------------------------------------------
-
-        header = self.header_builder.build()
-
-        business = self.business_knowledge_builder.build(
-            selected_tables
+        sections = self._build_sections(
+            question,
+            selection,
+            selected_tables,
         )
 
-        joins = self.join_knowledge_builder.build(
-            selected_tables
+        full_context = self._build_full_context(
+            sections,
         )
 
-        forbidden = self.forbidden_join_builder.build(
-            selected_tables
+        return self._build_result(
+            sections,
+            full_context,
         )
 
-        business_rules = self.business_rules_builder.build()
+    def _build_sections(
+        self,
+        question: str,
+        selection: dict[str, Any],
+        selected_tables: list[str],
+    ) -> dict[str, list[str]]:
 
-        sql_patterns = self.sql_pattern_builder.build(
-            question=question,
-            selection=selection,
-        )
+        return {
+            "header": self.header_builder.build(),
+            "business": self.business_knowledge_builder.build(selected_tables),
+            "joins": self.join_knowledge_builder.build(selected_tables),
+            "forbidden": self.forbidden_join_builder.build(selected_tables),
+            "business_rules": self.business_rules_builder.build(),
+            "sql_patterns": self.sql_pattern_builder.build(
+                question=question,
+                selection=selection,
+            ),
+            "tables": self.table_builder.build(selected_tables),
+            "relationships": self.relationship_builder.build(selected_tables),
+            "semantic": self.semantic_builder.build(question),
+            "prompt_rules": self.prompt_rules_builder.build(),
+        }
 
-        tables = self.table_builder.build(
-            selected_tables
-        )
-
-        relationships = self.relationship_builder.build(
-            selected_tables
-        )
-
-        semantic = self.semantic_builder.build(
-            question
-        )
-
-        prompt_rules = self.prompt_rules_builder.build()
-
-        # ------------------------------------------------------
-        # Full context
-        # ------------------------------------------------------
+    def _build_full_context(
+        self,
+        sections: dict,
+    ) -> str:
 
         context = []
 
-        context.extend(header)
-        context.extend(business)
-        context.extend(joins)
-        context.extend(forbidden)
-        context.extend(business_rules)
-        context.extend(sql_patterns)
-        context.extend(tables)
-        context.extend(relationships)
-        context.extend(semantic)
-        context.extend(prompt_rules)
+        for value in sections.values():
+            context.extend(value)
 
-        full_context = "\n".join(context)
+        return "\n".join(context)
 
-        print("\n")
-        print("=" * 100)
-        print("SQL CONTEXT")
-        print("=" * 100)
-        print(full_context)
-        print("=" * 100)
-        print("\n")
-
-        print("=" * 100)
-        print("BUSINESS KNOWLEDGE")
-        print("\n".join(business))
-
-        print("=" * 100)
-        print("JOIN KNOWLEDGE")
-        print("\n".join(joins))
-
-        print("=" * 100)
-        print("FORBIDDEN JOINS")
-        print("\n".join(forbidden))
-
-        print("=" * 100)
-        print("SEMANTIC CONTEXT")
-        print("\n".join(semantic))
+    def _build_result(
+        self,
+        sections: dict,
+        full_context: str,
+    ) -> dict:
 
         return {
-
-            "business_knowledge": "\n".join(
-                business
-            ),
-
-            "join_knowledge": "\n".join(
-                joins
-            ),
-
-            "forbidden_joins": "\n".join(
-                forbidden
-            ),
-
-            "semantic_context": "\n".join(
-                semantic
-            ),
-
-            "sql_patterns": "\n".join(
-                sql_patterns
-            ),
-
+            "business_knowledge": "\n".join(sections["business"]),
+            "join_knowledge": "\n".join(sections["joins"]),
+            "forbidden_joins": "\n".join(sections["forbidden"]),
+            "semantic_context": "\n".join(sections["semantic"]),
+            "sql_patterns": "\n".join(sections["sql_patterns"]),
             "full_context": full_context,
-
         }

@@ -6,11 +6,9 @@ from openai import (
 )
 
 from app.database.config import settings
-
 from app.models.agent_models import (
     ModelConfig,
 )
-
 from app.services.providers.base_provider import (
     BaseProvider,
 )
@@ -18,7 +16,7 @@ from app.services.providers.base_provider import (
 
 class AzureProvider(BaseProvider):
     """
-    Azure OpenAI Provider.
+    Azure OpenAI provider.
 
     Responsible for communicating with Azure OpenAI.
     """
@@ -36,50 +34,40 @@ class AzureProvider(BaseProvider):
         Generate a response using Azure OpenAI.
         """
 
-        client = self._create_client(
-            config
-        )
-
-        self._print_configuration(
-            config
+        client: AzureOpenAI = self._create_client(
+            config=config,
         )
 
         try:
-
             response = client.chat.completions.create(
-
                 model=config.deployment_name,
-
                 messages=[
-
                     {
                         "role": "system",
                         "content": config.system_prompt or "",
                     },
-
                     {
                         "role": "user",
                         "content": prompt,
                     },
-
                 ],
-
+                temperature=config.temperature,
+                top_p=config.top_p,
+                frequency_penalty=config.frequency_penalty,
+                presence_penalty=config.presence_penalty,
                 max_completion_tokens=config.max_tokens,
-
-            )
-
-            return (
-                response
-                .choices[0]
-                .message.content
-                .strip()
             )
 
         except OpenAIError as ex:
-
             raise RuntimeError(
-                f"Azure OpenAI error: {str(ex)}"
+                f"Azure OpenAI error: {ex}"
             ) from ex
+
+        content: str | None = (
+            response.choices[0].message.content
+        )
+
+        return content.strip() if content else ""
 
     # ==========================================================
     # PRIVATE
@@ -90,79 +78,26 @@ class AzureProvider(BaseProvider):
         config: ModelConfig,
     ) -> AzureOpenAI:
         """
-        Create Azure OpenAI client.
+        Create an Azure OpenAI client.
         """
 
-        api_key = os.getenv(
-            config.api_key_alias
+        api_key: str | None = os.getenv(
+            config.api_key_alias,
         )
 
-        if not api_key:
-
+        if api_key is None:
             raise ValueError(
-
                 f"Environment variable '{config.api_key_alias}' was not found."
-
             )
 
         return AzureOpenAI(
-
             api_key=api_key,
-
             azure_endpoint=config.api_base_url,
-
             api_version=settings.AZURE_OPENAI_API_VERSION,
-
+            timeout=config.timeout_seconds,
         )
 
-    def _print_configuration(
-        self,
-        config: ModelConfig,
-    ) -> None:
-        """
-        Print Azure configuration.
-        """
 
-        print()
-
-        print("=" * 100)
-
-        print("AZURE OPENAI CONFIGURATION")
-
-        print("=" * 100)
-
-        print(
-            f"Provider      : {config.provider}"
-        )
-
-        print(
-            f"Model         : {config.model_name}"
-        )
-
-        print(
-            f"Deployment    : {config.deployment_name}"
-        )
-
-        print(
-            f"Endpoint      : {config.api_base_url}"
-        )
-
-        print(
-            f"API Key Alias : {config.api_key_alias}"
-        )
-
-        print(
-            f"Temperature   : {config.temperature}"
-        )
-
-        print(
-            f"Top P         : {config.top_p}"
-        )
-
-        print(
-            f"Max Tokens    : {config.max_tokens}"
-        )
-
-        print("=" * 100)
-
-        print()
+__all__ = [
+    "AzureProvider",
+]

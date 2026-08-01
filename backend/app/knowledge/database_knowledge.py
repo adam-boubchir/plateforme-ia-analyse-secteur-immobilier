@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from typing import Any
+
+__all__ = ["DATABASE_KNOWLEDGE"]
+
 """
 Central business knowledge used by the SQL Context Engine.
 

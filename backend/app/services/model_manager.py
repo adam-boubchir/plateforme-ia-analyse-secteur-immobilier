@@ -12,12 +12,12 @@ from app.models.agent_models import (
 
 class ModelManager:
     """
-    Central manager responsible for retrieving AI model
-    configurations from the database.
+    Responsible for loading AI model configurations
+    from the database.
 
     Features
     --------
-    • Cache model configurations
+    • Cache configurations
     • Load active models
     • Support multiple AI agents
     • Ready for fallback strategies
@@ -26,14 +26,11 @@ class ModelManager:
     def __init__(
         self,
         db: Session,
-    ):
+    ) -> None:
 
-        self.db = db
+        self.db: Session = db
 
-        self._cache: dict[
-            str,
-            ModelConfig,
-        ] = {}
+        self._cache: dict[str, ModelConfig] = {}
 
     # ==========================================================
     # PUBLIC
@@ -44,42 +41,37 @@ class ModelManager:
         agent_name: str,
     ) -> ModelConfig:
         """
-        Return the active configuration for one agent.
+        Return the active configuration of an agent.
         """
 
         if agent_name in self._cache:
+            return self._cache[agent_name]
 
-            return self._cache[
-                agent_name
-            ]
-
-        config = self._load_active_model(
-            agent_name
+        config: ModelConfig = self._load_active_model(
+            agent_name=agent_name,
         )
 
-        self._cache[
-            agent_name
-        ] = config
+        self._cache[agent_name] = config
 
         return config
-
+    
     def has_model(
         self,
         agent_name: str,
     ) -> bool:
         """
-        Check whether an active configuration exists.
+        Return True if the agent has an active model.
         """
 
         try:
 
             self.get(
-                agent_name
+                agent_name=agent_name,
             )
 
             return True
 
-        except Exception:
+        except ValueError:
 
             return False
 
@@ -97,27 +89,24 @@ class ModelManager:
         )
 
         return self.get(
-            agent_name
+            agent_name=agent_name,
         )
 
     def refresh_cache(
         self,
     ) -> None:
         """
-        Reload every configuration.
+        Clear every cached configuration.
         """
 
         self._cache.clear()
 
-    def clear_cache(
-        self,
-    ) -> None:
+    def clear_cache(self) -> None:
         """
-        Alias.
+        Clear every cached configuration.
         """
 
-        self.refresh_cache()
-
+        self._cache.clear()
     # ==========================================================
     # PRIVATE
     # ==========================================================
@@ -127,44 +116,35 @@ class ModelManager:
         agent_name: str,
     ) -> ModelConfig:
         """
-        Load the active model from the database.
+        Load the active model configuration
+        from the database.
         """
 
-        entity = self.db.scalar(
-
-            select(
-                ModelConfigEntity
-            )
-
+        entity: ModelConfigEntity | None = self.db.scalar(
+            select(ModelConfigEntity)
             .where(
-                ModelConfigEntity.agent_name
-                == agent_name
+                ModelConfigEntity.agent_name == agent_name,
             )
-
             .where(
-                ModelConfigEntity.is_active
+                ModelConfigEntity.is_active,
             )
-
         )
 
         if entity is None:
-
             raise ValueError(
-
                 f"No active model configured for '{agent_name}'."
-
             )
 
         return self._to_model(
-            entity
+            entity=entity,
         )
 
+    @staticmethod
     def _to_model(
-        self,
         entity: ModelConfigEntity,
     ) -> ModelConfig:
         """
-        Convert ORM entity into ModelConfig.
+        Convert an ORM entity into a ModelConfig.
         """
 
         return ModelConfig(
@@ -206,3 +186,7 @@ class ModelManager:
             is_active=entity.is_active,
 
         )
+
+    __all__ = [
+        "ModelManager",
+    ]

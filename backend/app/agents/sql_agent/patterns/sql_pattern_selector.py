@@ -2,6 +2,19 @@ from app.agents.sql_agent.patterns.sql_pattern_repository import (
     SQLPatternRepository,
 )
 
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+CATEGORY_MAPPING = {
+    "Aggregate": "Aggregate",
+    "Ranking": "Ranking",
+    "Comparison": "Comparison",
+    "Evolution": "Evolution",
+    "Geographic": "Geographic",
+    "Statistics": "Statistics",
+}
+
 
 class SQLPatternSelector:
     """
@@ -13,12 +26,11 @@ class SQLPatternSelector:
         self,
         repository: SQLPatternRepository,
     ):
-
         self.repository = repository
 
-    # =====================================================
+    # ==========================================================
     # PUBLIC
-    # =====================================================
+    # ==========================================================
 
     def select(
         self,
@@ -26,50 +38,52 @@ class SQLPatternSelector:
         selection: dict,
     ) -> list[dict]:
         """
-        Return the SQL patterns ordered by relevance.
+        Return SQL patterns ordered by relevance.
         """
 
-        question = question.lower()
+        question = self._normalize_question(
+            question,
+        )
 
-        selected_patterns = []
+        patterns = []
 
         for pattern in self.repository.get_all_patterns():
 
             score = self._compute_score(
-
                 question=question,
-
                 pattern=pattern,
-
                 selection=selection,
-
             )
 
             if score <= 0:
                 continue
 
-            selected_patterns.append(
-
+            patterns.append(
                 {
                     "score": score,
                     "pattern": pattern,
                 }
-
             )
 
-        selected_patterns.sort(
-
-            key=lambda x: x["score"],
-
+        return sorted(
+            patterns,
+            key=lambda item: item["score"],
             reverse=True,
-
         )
 
-        return selected_patterns
-
-    # =====================================================
+    # ==========================================================
     # PRIVATE
-    # =====================================================
+    # ==========================================================
+
+    def _normalize_question(
+        self,
+        question: str,
+    ) -> str:
+        """
+        Normalize the user question before pattern matching.
+        """
+
+        return question.lower()
 
     def _compute_score(
         self,
@@ -78,14 +92,36 @@ class SQLPatternSelector:
         selection: dict,
     ) -> int:
         """
-        Compute the relevance score of one SQL pattern.
+        Compute the total relevance score of one SQL pattern.
+        """
+
+        score = self._compute_keyword_score(
+            question,
+            pattern,
+        )
+
+        score += self._compute_category_bonus(
+            pattern,
+            selection,
+        )
+
+        score += self._compute_context_bonus(
+            pattern,
+            selection,
+        )
+
+        return score
+
+    def _compute_keyword_score(
+        self,
+        question: str,
+        pattern: dict,
+    ) -> int:
+        """
+        Compute the score associated with keyword matches.
         """
 
         score = 0
-
-        # -----------------------------------------
-        # Intent keywords
-        # -----------------------------------------
 
         for keyword in pattern.get(
             "intent",
@@ -96,10 +132,6 @@ class SQLPatternSelector:
 
                 score += 10
 
-        # -----------------------------------------
-        # SQL keywords
-        # -----------------------------------------
-
         for keyword in pattern.get(
             "keywords",
             [],
@@ -109,9 +141,17 @@ class SQLPatternSelector:
 
                 score += 5
 
-        # -----------------------------------------
-        # Category detected by Knowledge Selector
-        # -----------------------------------------
+        return score
+
+    def _compute_category_bonus(
+        self,
+        pattern: dict,
+        selection: dict,
+    ) -> int:
+        """
+        Bonus if the Knowledge Selector already detected
+        this SQL category.
+        """
 
         detected_patterns = selection.get(
             "sql_patterns",
@@ -123,55 +163,45 @@ class SQLPatternSelector:
             "",
         )
 
-        category_mapping = {
-
-            "Aggregate": "Aggregate",
-
-            "Ranking": "Ranking",
-
-            "Comparison": "Comparison",
-
-            "Evolution": "Evolution",
-
-            "Geographic": "Geographic",
-
-            "Statistics": "Statistics",
-
-        }
-
         if (
-            category_mapping.get(category)
+            CATEGORY_MAPPING.get(category)
             in detected_patterns
         ):
+            return 50
 
-            score += 50
+        return 0
 
-        # -----------------------------------------
+    def _compute_context_bonus(
+        self,
+        pattern: dict,
+        selection: dict,
+    ) -> int:
+        """
+        Compute contextual bonuses.
+        """
+
+        category = pattern.get(
+            "category",
+            "",
+        )
+
+        bonus = 0
+
         # Geographic bonus
-        # -----------------------------------------
-
         if (
             selection.get("geographic")
             and category == "Geographic"
         ):
+            bonus += 20
 
-            score += 20
-
-        # -----------------------------------------
         # Time-series bonus
-        # -----------------------------------------
-
         if (
             selection.get("time_series")
             and category == "Evolution"
         ):
+            bonus += 20
 
-            score += 20
-
-        # -----------------------------------------
         # Aggregation bonus
-        # -----------------------------------------
-
         if (
             selection.get("aggregation")
             and category in (
@@ -179,18 +209,13 @@ class SQLPatternSelector:
                 "Statistics",
             )
         ):
+            bonus += 15
 
-            score += 15
-
-        # -----------------------------------------
         # Join bonus
-        # -----------------------------------------
-
         if (
             selection.get("needs_join")
             and category == "Geographic"
         ):
+            bonus += 10
 
-            score += 10
-
-        return score
+        return bonus

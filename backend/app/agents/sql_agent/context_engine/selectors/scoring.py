@@ -24,34 +24,40 @@ class RuleScorer:
         Returns the activated rules ordered by relevance.
         """
 
-        question = question.lower()
-
-        scored_rules = []
-
-        for rule in rules:
-
-            score = self._compute_score(
-                question,
-                rule,
-            )
-
-            scored_rules.append(
-                (
-                    rule,
-                    score,
-                )
-            )
-
-        scored_rules.sort(
-            key=lambda x: x[1],
-            reverse=True,
+        question = self._normalize_question(
+            question,
         )
 
-        return scored_rules
+        scored_rules = [
+            (
+                rule,
+                self._compute_score(
+                    question,
+                    rule,
+                ),
+            )
+            for rule in rules
+        ]
+
+        return sorted(
+            scored_rules,
+            key=lambda item: item[1],
+            reverse=True,
+        )
 
     # ==========================================================
     # PRIVATE
     # ==========================================================
+
+    def _normalize_question(
+        self,
+        question: str,
+    ) -> str:
+        """
+        Normalize the user question before scoring.
+        """
+
+        return question.lower()
 
     def _compute_score(
         self,
@@ -62,78 +68,57 @@ class RuleScorer:
         Compute one rule score.
         """
 
-        score = 0
+        score = self._compute_keyword_score(
+            question,
+            rule,
+        )
 
-        # -----------------------------------------
-        # Keyword matches
-        # -----------------------------------------
+        score += self._compute_bonus(
+            rule,
+        )
+
+        return score
+
+    def _compute_keyword_score(
+        self,
+        question: str,
+        rule: Rule,
+    ) -> int:
+        """
+        Compute the score associated with keyword matches.
+        """
+
+        score = 0
 
         for keyword in rule.keywords:
 
             if keyword.lower() in question:
 
                 score += 10
-
-                # Longer keywords are generally
-                # more specific.
                 score += len(keyword) // 3
-
-        # -----------------------------------------
-        # Join bonus
-        # -----------------------------------------
-
-        if rule.needs_join:
-
-            score += 2
-
-        # -----------------------------------------
-        # Aggregation bonus
-        # -----------------------------------------
-
-        if rule.aggregation:
-
-            score += 2
-
-        # -----------------------------------------
-        # Geographic bonus
-        # -----------------------------------------
-
-        if rule.geographic:
-
-            score += 2
-
-        # -----------------------------------------
-        # Time-series bonus
-        # -----------------------------------------
-
-        if rule.time_series:
-
-            score += 2
 
         return score
 
-    # ==========================================================
-    # DEBUG
-    # ==========================================================
-
-    def explain(
+    def _compute_bonus(
         self,
-        question: str,
-        rules: list[Rule],
-    ) -> None:
+        rule: Rule,
+    ) -> int:
+        """
+        Compute structural bonuses.
+        """
 
-        scored = self.score(
-            question,
-            rules,
-        )
+        bonus = 0
 
-        print("\n" + "=" * 100)
-        print("RULE SCORING")
-        print("=" * 100)
+        if rule.needs_join:
+            bonus += 2
 
-        for rule, score in scored:
+        if rule.aggregation:
+            bonus += 2
 
-            print(f"{score:>3}  ->  {rule.name}")
+        if rule.geographic:
+            bonus += 2
 
-        print("=" * 100)
-        print()
+        if rule.time_series:
+            bonus += 2
+
+        return bonus

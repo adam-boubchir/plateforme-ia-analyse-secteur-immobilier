@@ -1,118 +1,150 @@
-from app.services.metadata_service import (
-    MetadataService,
-)
+from __future__ import annotations
+
+from typing import Any
+
+from app.services.metadata_service import MetadataService
+
+__all__ = ["RelationshipContextBuilder"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+SECTION_SEPARATOR = "=" * 100
+
+SECTION_TITLE = "DATABASE RELATIONSHIPS"
+
+EMPTY_RELATIONSHIPS_MESSAGE = "No relationships found."
 
 
 class RelationshipContextBuilder:
     """
-    Build the DATABASE RELATIONSHIPS section of the SQL context.
+    Build the database relationships section of the SQL context.
 
     Only relationships involving the selected tables
-    are included in the context.
+    are included in the generated context.
     """
 
     def __init__(
         self,
         metadata_service: MetadataService,
-    ):
+    ) -> None:
+        self.metadata_service = metadata_service
 
-        self.metadata_service = (
-            metadata_service
-        )
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
 
     def build(
         self,
         selected_tables: list[str],
     ) -> list[str]:
         """
-        Build the relationships section using only
+        Build the relationships section.
+        """
+
+        relationships = self._get_selected_relationships(
+            selected_tables,
+        )
+
+        context = [
+            SECTION_TITLE,
+            "",
+        ]
+
+        if relationships:
+
+            for relationship in relationships:
+                context.extend(
+                    self._build_relationship(
+                        relationship,
+                    )
+                )
+
+        else:
+
+            context.extend(
+                self._empty_relationships(),
+            )
+
+        context.extend(
+            [
+                SECTION_SEPARATOR,
+                "",
+            ]
+        )
+
+        return context
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _get_selected_relationships(
+        self,
+        selected_tables: list[str],
+    ) -> list[Any]:
+        """
+        Return only the relationships involving
         the selected tables.
         """
 
-        context = []
-
-        context.append(
-            "DATABASE RELATIONSHIPS"
-        )
-
-        context.append("")
-
-        relationships = [
-
+        return [
             relationship
-
             for relationship in self.metadata_service.get_relationships()
-
             if (
                 relationship.source_table in selected_tables
                 and relationship.target_table in selected_tables
             )
-
         ]
 
-        if not relationships:
+    def _empty_relationships(
+        self,
+    ) -> list[str]:
+        """
+        Build the empty relationships section.
+        """
 
-            context.append(
-                "No relationships found."
-            )
-
-            context.append("")
-
-            context.append("=" * 100)
-
-            context.append("")
-
-            return context
-
-        for relationship in relationships:
-
-            context.extend(
-
-                self._build_relationship(
-                    relationship
-                )
-
-            )
-
-        context.append(
-            "=" * 100
-        )
-
-        context.append("")
-
-        return context
+        return [
+            EMPTY_RELATIONSHIPS_MESSAGE,
+            "",
+        ]
 
     def _build_relationship(
         self,
-        relationship,
+        relationship: Any,
     ) -> list[str]:
         """
         Build one relationship description.
         """
 
-        context = []
+        context: list[str] = []
 
-        if hasattr(
+        constraint = getattr(
             relationship,
             "constraint_name",
-        ):
+            None,
+        )
+
+        if constraint:
 
             context.append(
-                f"Constraint : {relationship.constraint_name}"
+                f"Constraint : {constraint}"
             )
 
-        context.append(
-            f"{relationship.source_table}.{relationship.source_column}"
+        context.extend(
+            [
+                (
+                    f"{relationship.source_table}"
+                    f".{relationship.source_column}"
+                ),
+                "        ↓",
+                (
+                    f"{relationship.target_table}"
+                    f".{relationship.target_column}"
+                ),
+                "",
+            ]
         )
-
-        context.append(
-            "        ↓"
-        )
-
-        context.append(
-            f"{relationship.target_table}.{relationship.target_column}"
-        )
-
-        context.append("")
 
         return context

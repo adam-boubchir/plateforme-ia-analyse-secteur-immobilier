@@ -1,6 +1,18 @@
-from app.knowledge.database_knowledge import (
-    DATABASE_KNOWLEDGE,
-)
+from __future__ import annotations
+
+from typing import Any
+
+from app.knowledge.database_knowledge import DATABASE_KNOWLEDGE
+
+__all__ = ["ForbiddenJoinBuilder"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+SECTION_SEPARATOR = "=" * 80
+SECTION_TITLE = "FORBIDDEN JOINS"
+FORBIDDEN_JOINS_TITLE = "Never Join With:"
 
 
 class ForbiddenJoinBuilder:
@@ -11,6 +23,10 @@ class ForbiddenJoinBuilder:
     must never be generated for the selected tables.
     """
 
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
+
     def build(
         self,
         selected_tables: list[str],
@@ -19,50 +35,64 @@ class ForbiddenJoinBuilder:
         Build the FORBIDDEN JOINS section.
         """
 
-        context = []
-
-        context.append("=" * 80)
-        context.append("")
-        context.append("FORBIDDEN JOINS")
-        context.append("")
+        context = [
+            SECTION_SEPARATOR,
+            "",
+            SECTION_TITLE,
+            "",
+        ]
 
         for table_name in selected_tables:
 
-            if table_name not in DATABASE_KNOWLEDGE:
-                continue
+            knowledge = DATABASE_KNOWLEDGE.get(table_name)
 
-            knowledge = DATABASE_KNOWLEDGE[
-                table_name
-            ]
+            if knowledge is None:
+                continue
 
             forbidden_tables = knowledge.get(
                 "forbidden_tables",
-                [],
+                (),
             )
 
-            if not forbidden_tables:
+            forbidden_lines = self._build_forbidden_lines(
+                forbidden_tables,
+                selected_tables,
+            )
+
+            if not forbidden_lines:
                 continue
 
-            context.append(
-                f"Table : {table_name}"
+            context.extend(
+                [
+                    f"Table : {table_name}",
+                    FORBIDDEN_JOINS_TITLE,
+                    *forbidden_lines,
+                    "",
+                ]
             )
-
-            context.append(
-                "Never Join With:"
-            )
-
-            for forbidden_table in forbidden_tables:
-
-                if (
-                    forbidden_table
-                    not in selected_tables
-                ):
-                    continue
-
-                context.append(
-                    f"  - {forbidden_table}"
-                )
-
-            context.append("")
 
         return context
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _build_forbidden_lines(
+        self,
+        forbidden_tables: tuple[str, ...] | list[str],
+        selected_tables: list[str],
+    ) -> list[str]:
+        """
+        Build the forbidden joins for one table.
+        """
+
+        lines: list[str] = []
+
+        for table in forbidden_tables:
+
+            if table not in selected_tables:
+                continue
+
+            lines.append(f"  - {table}")
+
+        return lines

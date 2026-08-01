@@ -1,21 +1,40 @@
-from app.agents.sql_agent.few_shot_provider import (
-    FewShotProvider,
-)
+from __future__ import annotations
+
+from typing import Any
+
+from app.agents.sql_agent.few_shot_provider import FewShotProvider
+
+__all__ = ["PromptBuilder"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+SECTION_SEPARATOR = "=" * 80
+
+QUESTION_ANALYSIS = "QUESTION ANALYSIS"
+DATABASE_CONTEXT = "DATABASE CONTEXT"
+FEW_SHOT_EXAMPLES = "FEW SHOT EXAMPLES"
+USER_QUESTION = "USER QUESTION"
+EXPECTED_OUTPUT = "EXPECTED OUTPUT"
+
+DEFAULT_RULE_MESSAGE = "No specific business rules detected."
+EXPECTED_SQL_OUTPUT = "Return ONLY the SQL query."
 
 
 class PromptBuilder:
     """
-    Builds the final prompt sent to the SQL LLM.
+    Build the final prompt sent to the SQL LLM.
 
-    The PromptBuilder combines:
+    This class assembles:
 
         • System instructions
-        • Dynamic rules inferred from the question
+        • Dynamic rules
         • Database context
         • Few-shot examples
         • User question
 
-    This class should contain NO business logic.
+    No business logic should be implemented here.
     """
 
     SYSTEM_PROMPT = """
@@ -55,9 +74,11 @@ CANNOT_GENERATE_SQL
 Nothing else.
 """
 
-    def __init__(self):
-
-        self.few_shot_provider = FewShotProvider()
+    def __init__(
+        self,
+        few_shot_provider: FewShotProvider,
+    ) -> None:
+        self.few_shot_provider = few_shot_provider
 
     # ==========================================================
     # PUBLIC
@@ -67,50 +88,43 @@ Nothing else.
         self,
         question: str,
         context: str,
-        selection: dict,
+        selection: dict[str, Any],
     ) -> str:
         """
-        Build the final LLM prompt.
+        Build the final prompt sent to the LLM.
         """
 
         dynamic_rules = self._build_dynamic_rules(
-            selection
+            selection,
         )
 
         examples = self.few_shot_provider.get_examples(
-            question
+            question,
         )
 
         sections = [
-
             self.SYSTEM_PROMPT,
-
             self._section(
-                "QUESTION ANALYSIS",
+                QUESTION_ANALYSIS,
                 dynamic_rules,
             ),
-
             self._section(
-                "DATABASE CONTEXT",
+                DATABASE_CONTEXT,
                 context,
             ),
-
             self._section(
-                "FEW SHOT EXAMPLES",
+                FEW_SHOT_EXAMPLES,
                 examples,
             ),
-
             self._section(
-                "USER QUESTION",
+                USER_QUESTION,
                 question,
             ),
-
             self._section(
-                "EXPECTED OUTPUT",
-                "Return ONLY the SQL query.",
+                EXPECTED_OUTPUT,
+                EXPECTED_SQL_OUTPUT,
             ),
-
-            "SQL:"
+            "SQL:",
         ]
 
         return "\n\n".join(sections).strip()
@@ -124,204 +138,186 @@ Nothing else.
         title: str,
         body: str,
     ) -> str:
+        """
+        Build one formatted prompt section.
+        """
 
         return (
-            "=" * 80
-            + "\n"
-            + title
-            + "\n"
-            + "=" * 80
-            + "\n\n"
-            + body
+            f"{SECTION_SEPARATOR}\n"
+            f"{title}\n"
+            f"{SECTION_SEPARATOR}\n\n"
+            f"{body}"
+        )
+
+    def _build_list_section(
+        self,
+        title: str,
+        values: list[str],
+        rules: list[str],
+    ) -> None:
+        """
+        Add one formatted list section.
+        """
+
+        if not values:
+            return
+
+        rules.append(f"{title}:")
+
+        rules.extend(
+            f"• {value}"
+            for value in values
+        )
+
+        rules.append("")
+
+    def _add_aggregation_rules(
+        self,
+        rules: list[str],
+    ) -> None:
+        """
+        Add aggregation instructions.
+        """
+
+        rules.extend(
+            [
+                "The query requires aggregation.",
+                "Prefer AVG(), SUM(), COUNT(), MIN() or MAX().",
+                "",
+            ]
+        )
+
+    def _add_time_series_rules(
+        self,
+        rules: list[str],
+    ) -> None:
+        """
+        Add temporal instructions.
+        """
+
+        rules.extend(
+            [
+                "The query is temporal.",
+                "Always ORDER BY the chronological column.",
+                "Use GROUP BY when appropriate.",
+                "",
+            ]
+        )
+
+    def _add_geographic_rules(
+        self,
+        rules: list[str],
+    ) -> None:
+        """
+        Add geographic instructions.
+        """
+
+        rules.extend(
+            [
+                "Geographic dimensions are involved.",
+                "Join REGION, PROVINCE_PREFECTURE or COMMUNE whenever required.",
+                "",
+            ]
+        )
+
+    def _add_join_rules(
+        self,
+        rules: list[str],
+    ) -> None:
+        """
+        Add JOIN instructions.
+        """
+
+        rules.extend(
+            [
+                "Multiple tables are required.",
+                "Generate explicit INNER JOIN statements.",
+                "",
+            ]
         )
 
     def _build_dynamic_rules(
         self,
-        selection: dict,
+        selection: dict[str, Any],
     ) -> str:
         """
-        Build dynamic prompt instructions according
+        Build prompt instructions according
         to the detected question.
         """
 
-        rules = []
+        rules: list[str] = []
 
-        # ------------------------------------------------------
-        # Business domains
-        # ------------------------------------------------------
-
-        business_domains = selection.get(
-            "business_domains",
-            [],
+        self._build_list_section(
+            "Business Domains",
+            selection.get(
+                "business_domains",
+                [],
+            ),
+            rules,
         )
 
-        if business_domains:
-
-            rules.append(
-                "Business Domains:"
-            )
-
-            for domain in business_domains:
-
-                rules.append(
-                    f"• {domain}"
-                )
-
-            rules.append("")
-
-        # ------------------------------------------------------
-        # Question types
-        # ------------------------------------------------------
-
-        question_types = selection.get(
-            "question_types",
-            [],
+        self._build_list_section(
+            "Question Types",
+            selection.get(
+                "question_types",
+                [],
+            ),
+            rules,
         )
 
-        if question_types:
-
-            rules.append(
-                "Question Types:"
-            )
-
-            for q in question_types:
-
-                rules.append(
-                    f"• {q}"
-                )
-
-            rules.append("")
-
-        # ------------------------------------------------------
-        # Selected tables
-        # ------------------------------------------------------
-
-        tables = selection.get(
-            "tables",
-            [],
+        self._build_list_section(
+            "Selected Tables",
+            selection.get(
+                "tables",
+                [],
+            ),
+            rules,
         )
 
-        if tables:
-
-            rules.append(
-                "Selected Tables:"
-            )
-
-            for table in tables:
-
-                rules.append(
-                    f"• {table}"
-                )
-
-            rules.append("")
-
-        # ------------------------------------------------------
-        # SQL Patterns
-        # ------------------------------------------------------
-
-        patterns = selection.get(
-            "sql_patterns",
-            [],
+        self._build_list_section(
+            "Detected SQL Patterns",
+            selection.get(
+                "sql_patterns",
+                [],
+            ),
+            rules,
         )
-
-        if patterns:
-
-            rules.append(
-                "Detected SQL Patterns:"
-            )
-
-            for pattern in patterns:
-
-                rules.append(
-                    f"• {pattern}"
-                )
-
-            rules.append("")
-
-        # ------------------------------------------------------
-        # Aggregation
-        # ------------------------------------------------------
 
         if selection.get(
             "aggregation",
             False,
         ):
-
-            rules.append(
-                "The query requires aggregation."
+            self._add_aggregation_rules(
+                rules,
             )
-
-            rules.append(
-                "Prefer AVG(), SUM(), COUNT(), MIN() or MAX()."
-            )
-
-            rules.append("")
-
-        # ------------------------------------------------------
-        # Time Series
-        # ------------------------------------------------------
 
         if selection.get(
             "time_series",
             False,
         ):
-
-            rules.append(
-                "The query is temporal."
+            self._add_time_series_rules(
+                rules,
             )
-
-            rules.append(
-                "Always ORDER BY the chronological column."
-            )
-
-            rules.append(
-                "Use GROUP BY when appropriate."
-            )
-
-            rules.append("")
-
-        # ------------------------------------------------------
-        # Geographic
-        # ------------------------------------------------------
 
         if selection.get(
             "geographic",
             False,
         ):
-
-            rules.append(
-                "Geographic dimensions are involved."
+            self._add_geographic_rules(
+                rules,
             )
-
-            rules.append(
-                "Join REGION, PROVINCE_PREFECTURE or COMMUNE whenever required."
-            )
-
-            rules.append("")
-
-        # ------------------------------------------------------
-        # Join
-        # ------------------------------------------------------
 
         if selection.get(
             "needs_join",
             False,
         ):
-
-            rules.append(
-                "Multiple tables are required."
+            self._add_join_rules(
+                rules,
             )
-
-            rules.append(
-                "Generate explicit INNER JOIN statements."
-            )
-
-            rules.append("")
 
         if not rules:
-
             rules.append(
-                "No specific business rules detected."
+                DEFAULT_RULE_MESSAGE,
             )
 
         return "\n".join(rules)

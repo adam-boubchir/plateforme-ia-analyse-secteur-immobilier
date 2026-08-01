@@ -1,21 +1,32 @@
-from app.agents.sql_agent.few_shots.examples import (
-    FEW_SHOT_EXAMPLES,
-)
+from __future__ import annotations
+
+from typing import Any
+
+__all__ = ["FewShotProvider"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+EXAMPLE_SEPARATOR = "=" * 60
+
+NO_EXAMPLE_MESSAGE = "No example available."
 
 
 class FewShotProvider:
     """
-    Provides the most relevant few-shot examples
-    according to the detected user question.
+    Provide the most relevant few-shot examples for a question.
 
-    This class can later be replaced by a vector
-    search (embeddings/RAG) without modifying the
-    PromptBuilder.
+    The current implementation uses simple keyword matching.
+    It can later be replaced by a semantic search engine
+    without modifying the PromptBuilder.
     """
 
-    def __init__(self):
-
-        self.examples = FEW_SHOT_EXAMPLES
+    def __init__(
+        self,
+        examples: list[dict[str, Any]],
+    ) -> None:
+        self.examples = examples
 
     # ==========================================================
     # PUBLIC
@@ -31,22 +42,22 @@ class FewShotProvider:
         """
 
         ranked_examples = self._rank_examples(
-            question
+            question,
         )
 
         if not ranked_examples:
+            return NO_EXAMPLE_MESSAGE
 
-            return "No example available."
-
-        prompt = []
+        formatted_examples: list[str] = []
 
         for example in ranked_examples[:max_examples]:
-
-            prompt.extend(
-                self._format_example(example)
+            formatted_examples.extend(
+                self._format_example(
+                    example,
+                )
             )
 
-        return "\n".join(prompt)
+        return "\n".join(formatted_examples)
 
     # ==========================================================
     # PRIVATE
@@ -55,76 +66,80 @@ class FewShotProvider:
     def _rank_examples(
         self,
         question: str,
-    ):
+    ) -> list[dict[str, Any]]:
         """
-        Very simple keyword ranking.
+        Rank examples using keyword matching.
 
-        This will later be replaced by
-        semantic search.
+        This implementation can later be replaced
+        by semantic vector search.
         """
 
-        question = question.lower()
+        normalized_question = question.casefold()
 
-        scored = []
+        scored_examples: list[tuple[int, dict[str, Any]]] = []
 
         for example in self.examples:
-
-            score = 0
 
             keywords = example.get(
                 "keywords",
                 [],
             )
 
-            for keyword in keywords:
+            score = self._calculate_score(
+                normalized_question,
+                keywords,
+            )
 
-                if keyword.lower() in question:
-
-                    score += 1
-
-            scored.append(
+            scored_examples.append(
                 (
                     score,
                     example,
                 )
             )
 
-        scored.sort(
-            key=lambda x: x[0],
+        scored_examples.sort(
+            key=lambda item: item[0],
             reverse=True,
         )
 
         return [
-
             example
-
-            for score, example in scored
-
+            for score, example in scored_examples
             if score > 0
-
         ]
 
     def _format_example(
         self,
-        example: dict,
-    ):
+        example: dict[str, Any],
+    ) -> list[str]:
+        """
+        Format one few-shot example.
+        """
 
-        lines = []
+        return [
+            EXAMPLE_SEPARATOR,
+            f"Question : {example.get('question', '')}",
+            "",
+            "SQL",
+            example.get("sql", ""),
+            EXAMPLE_SEPARATOR,
+            "",
+        ]
 
-        lines.append("=" * 60)
+    def _calculate_score(
+        self,
+        question: str,
+        keywords: list[str],
+    ) -> int:
+        """
+        Compute a keyword relevance score.
+        """
 
-        lines.append(
-            f"Question : {example['question']}"
-        )
+        score = 0
 
-        lines.append("")
+        for keyword in keywords:
 
-        lines.append("SQL")
+            if keyword.casefold() in question:
+                score += 1
 
-        lines.append(example["sql"])
-
-        lines.append("=" * 60)
-
-        lines.append("")
-
-        return lines
+        return score

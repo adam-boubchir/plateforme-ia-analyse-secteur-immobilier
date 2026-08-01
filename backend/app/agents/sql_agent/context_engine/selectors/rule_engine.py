@@ -1,20 +1,28 @@
+from __future__ import annotations
+
 from app.agents.sql_agent.context_engine.selectors.rules import (
-    RULES,
     Rule,
 )
+
+__all__ = ["RuleEngine"]
 
 
 class RuleEngine:
     """
-    Rule engine responsible for matching a user question
-    against all predefined business rules.
+    Evaluate business rules against a user question.
 
-    It returns the list of activated rules.
+    Responsibilities
+    ----------------
+    - Normalize the user question.
+    - Evaluate all available rules.
+    - Return the activated rules.
     """
 
-    def __init__(self):
-
-        self.rules = RULES
+    def __init__(
+        self,
+        rules: list[Rule],
+    ) -> None:
+        self.rules = rules
 
     # ==========================================================
     # PUBLIC
@@ -25,75 +33,46 @@ class RuleEngine:
         question: str,
     ) -> list[Rule]:
         """
-        Evaluate every rule.
-
-        Returns the activated rules.
+        Evaluate all business rules and return the activated ones.
         """
 
-        question = question.lower()
+        normalized_question = self._normalize_question(
+            question,
+        )
 
-        activated_rules = []
-
-        for rule in self.rules:
-
-            if self._match_rule(
-                question,
+        return [
+            rule
+            for rule in self.rules
+            if self._matches_rule(
+                normalized_question,
                 rule,
-            ):
-
-                activated_rules.append(rule)
-
-        return activated_rules
+            )
+        ]
 
     # ==========================================================
     # PRIVATE
     # ==========================================================
 
-    def _match_rule(
+    def _normalize_question(
+        self,
+        question: str,
+    ) -> str:
+        """
+        Normalize the user question before rule evaluation.
+        """
+
+        return question.casefold()
+
+    def _matches_rule(
         self,
         question: str,
         rule: Rule,
     ) -> bool:
         """
-        Returns True if one keyword matches.
+        Return True if at least one rule keyword matches the question.
         """
 
-        for keyword in rule.keywords:
-
-            if keyword.lower() in question:
-
-                return True
-
-        return False
-
-    # ==========================================================
-    # DEBUG
-    # ==========================================================
-
-    def explain(
-        self,
-        question: str,
-    ) -> None:
-        """
-        Display which rules matched.
-        Useful during development.
-        """
-
-        activated = self.evaluate(question)
-
-        print("\n" + "=" * 100)
-        print("RULE ENGINE")
-        print("=" * 100)
-
-        if not activated:
-
-            print("No rule matched.")
-
-        else:
-
-            for rule in activated:
-
-                print(f"✓ {rule.name}")
-
-        print("=" * 100)
-        print()
+        return any(
+            keyword.casefold() in question
+            for keyword in rule.keywords
+        )

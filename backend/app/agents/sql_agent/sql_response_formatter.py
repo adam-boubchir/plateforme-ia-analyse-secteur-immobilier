@@ -1,15 +1,43 @@
+from __future__ import annotations
+
 from typing import Any
+
+__all__ = ["SQLResponseFormatter"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+EMPTY_RESULT_MESSAGE = (
+    "Aucune donnée ne correspond à votre demande."
+)
+
+SINGLE_RESULT_MESSAGE = (
+    "Votre requête a retourné un seul résultat.\n\n"
+    "Les informations sont disponibles dans le tableau des résultats."
+)
+
+MULTIPLE_RESULTS_TEMPLATE = (
+    "La requête SQL a retourné {total} résultats.\n\n"
+    "Les données sont affichées dans le tableau.\n\n"
+    "Vous pouvez :\n"
+    "• Trier les colonnes ;\n"
+    "• Filtrer les données ;\n"
+    "• Rechercher des valeurs ;\n"
+    "• Exporter les résultats ;\n"
+    "• Utiliser les visualisations disponibles."
+)
 
 
 class SQLResponseFormatter:
     """
-    Format SQL query results into a user-friendly response.
+    Format SQL execution results.
 
-    This class does NOT interpret data.
-    It only summarizes the execution result.
+    This class does not interpret SQL data.
+    It only summarizes the execution outcome.
 
-    Later a dedicated Response Agent can transform
-    SQL results into natural language.
+    Natural-language explanations should be produced
+    by a dedicated Response Agent.
     """
 
     # ==========================================================
@@ -21,56 +49,47 @@ class SQLResponseFormatter:
         rows: list[dict[str, Any]],
     ) -> str:
         """
-        Format SQL results.
+        Build a user-friendly summary of the SQL execution.
         """
 
-        total = len(rows)
+        row_count = len(rows)
 
-        if total == 0:
-
+        if row_count == 0:
             return self._empty_result()
 
-        if total == 1:
-
+        if row_count == 1:
             return self._single_result()
 
         return self._multiple_results(
-            total
+            row_count,
         )
 
     # ==========================================================
     # PRIVATE
     # ==========================================================
 
-    def _empty_result(
-        self,
-    ) -> str:
+    def _empty_result(self) -> str:
+        """
+        Return the message displayed when no rows are returned.
+        """
 
-        return (
-            "Aucune donnée ne correspond à votre demande."
-        )
+        return EMPTY_RESULT_MESSAGE
 
-    def _single_result(
-        self,
-    ) -> str:
+    def _single_result(self) -> str:
+        """
+        Return the message displayed for a single row.
+        """
 
-        return (
-            "Votre requête a retourné un seul résultat.\n\n"
-            "Les informations sont disponibles dans le tableau des résultats."
-        )
+        return SINGLE_RESULT_MESSAGE
 
     def _multiple_results(
         self,
-        total: int,
+        row_count: int,
     ) -> str:
+        """
+        Return the message displayed for multiple rows.
+        """
 
-        return (
-            f"La requête SQL a retourné {total} résultats.\n\n"
-            "Les données sont affichées dans le tableau.\n\n"
-            "Vous pouvez :\n"
-            "• trier les colonnes ;\n"
-            "• filtrer les données ;\n"
-            "• rechercher des valeurs ;\n"
-            "• exporter les résultats ;\n"
-            "• utiliser les visualisations disponibles."
+        return MULTIPLE_RESULTS_TEMPLATE.format(
+            total=row_count,
         )

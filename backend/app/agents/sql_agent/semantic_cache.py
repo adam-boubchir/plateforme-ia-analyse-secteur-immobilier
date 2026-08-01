@@ -3,29 +3,36 @@ from threading import Lock
 
 class SemanticCache:
     """
-    Cache mémoire contenant les valeurs métier utilisées
-    par le SQL Agent.
+    In-memory cache containing business values used by the SQL Agent.
 
-    Le cache est chargé une seule fois au démarrage
-    de l'application.
+    The cache is loaded only once during the application startup.
     """
 
     _instance = None
     _lock = Lock()
 
-    def __new__(cls):
+    def __new__(
+        cls,
+    ):
+        """
+        Ensure a single cache instance (Singleton).
+        """
 
         with cls._lock:
 
             if cls._instance is None:
 
                 cls._instance = super().__new__(cls)
-
                 cls._instance._initialized = False
 
         return cls._instance
 
-    def __init__(self):
+    def __init__(
+        self,
+    ):
+        """
+        Initialize the cache only once.
+        """
 
         if self._initialized:
             return
@@ -34,38 +41,65 @@ class SemanticCache:
 
         self.loaded = False
 
-        self.regions = []
+        self.regions: list[str] = []
+        self.provinces: list[str] = []
+        self.communes: list[str] = []
+        self.quartiers: list[str] = []
+        self.materials: list[str] = []
+        self.products: list[str] = []
 
-        self.provinces = []
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
 
-        self.communes = []
-
-        self.quartiers = []
-
-        self.materials = []
-
-        self.products = []
-
-    def is_loaded(self) -> bool:
+    def is_loaded(
+        self,
+    ) -> bool:
+        """
+        Return True if the cache has already been loaded.
+        """
 
         return self.loaded
 
-    def mark_loaded(self):
+    def mark_loaded(
+        self,
+    ) -> None:
+        """
+        Mark the cache as loaded.
+        """
 
         self.loaded = True
 
-    def clear(self):
+    def clear(
+        self,
+    ) -> None:
+        """
+        Clear every cached business value.
+        """
 
-        self.regions.clear()
-
-        self.provinces.clear()
-
-        self.communes.clear()
-
-        self.quartiers.clear()
-
-        self.materials.clear()
-
-        self.products.clear()
+        self._clear_collections()
 
         self.loaded = False
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _clear_collections(
+        self,
+    ) -> None:
+        """
+        Clear all cached collections.
+        """
+
+        collections = (
+            self.regions,
+            self.provinces,
+            self.communes,
+            self.quartiers,
+            self.materials,
+            self.products,
+        )
+
+        for collection in collections:
+            collection.clear()

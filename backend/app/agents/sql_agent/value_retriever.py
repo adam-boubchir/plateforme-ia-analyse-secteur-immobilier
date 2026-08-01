@@ -6,8 +6,8 @@ class ValueRetriever:
     """
     Retrieve useful business values from the database.
 
-    This class enriches the prompt with representative values
-    corresponding to the detected entities.
+    This class enriches the SQL prompt with representative
+    business values extracted from the database.
     """
 
     MAX_VALUES = 20
@@ -18,166 +18,195 @@ class ValueRetriever:
     ):
         self.db = db
 
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
+
     def retrieve(
         self,
         entities: dict,
     ) -> str:
         """
-        Build additional business context from detected entities.
+        Build additional business context.
         """
 
-        context = []
+        sections = []
 
         if entities.get("regions"):
-
-            context.extend(
+            sections.extend(
                 self._get_regions()
             )
 
         if entities.get("materials"):
-
-            context.extend(
+            sections.extend(
                 self._get_materials()
             )
 
         if entities.get("products"):
-
-            context.extend(
+            sections.extend(
                 self._get_products(
                     entities["products"]
                 )
             )
 
         if entities.get("years"):
-
-            context.append("")
-            context.append("REQUESTED YEARS")
-            context.append("----------------")
-
-            for year in entities["years"]:
-
-                context.append(
-                    str(year)
+            sections.extend(
+                self._format_years(
+                    entities["years"]
                 )
+            )
 
-            context.append("")
+        return "\n".join(sections)
 
-        return "\n".join(context)
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
 
-    # =====================================================
+    def _execute(
+        self,
+        sql,
+        params: dict | None = None,
+    ):
+        """
+        Execute a SQL query.
+        """
+
+        return self.db.execute(
+            sql,
+            params or {},
+        ).fetchall()
+
+    def _build_section(
+        self,
+        title: str,
+        values: list[str],
+    ) -> list[str]:
+        """
+        Build one formatted context section.
+        """
+
+        if not values:
+            return []
+
+        return [
+            "",
+            title,
+            "----------------",
+            *values,
+            "",
+        ]
+
+    # ==========================================================
     # Regions
-    # =====================================================
+    # ==========================================================
 
     def _get_regions(
         self,
     ) -> list[str]:
 
-        sql = text(
-            f"""
-            SELECT TOP ({self.MAX_VALUES})
-                nom_region
-            FROM REGION
-            ORDER BY nom_region
-            """
+        rows = self._execute(
+            text(
+                f"""
+                SELECT TOP ({self.MAX_VALUES})
+                    nom_region
+                FROM REGION
+                ORDER BY nom_region
+                """
+            )
         )
 
-        rows = self.db.execute(
-            sql
-        ).fetchall()
-
-        context = []
-
-        context.append("")
-        context.append("KNOWN REGIONS")
-        context.append("----------------")
-
-        for row in rows:
-
-            context.append(
+        return self._build_section(
+            "KNOWN REGIONS",
+            [
                 row.nom_region
-            )
+                for row in rows
+            ],
+        )
 
-        context.append("")
-
-        return context
-
-    # =====================================================
+    # ==========================================================
     # Materials
-    # =====================================================
+    # ==========================================================
 
     def _get_materials(
         self,
     ) -> list[str]:
 
-        sql = text(
-            f"""
-            SELECT DISTINCT TOP ({self.MAX_VALUES})
-                nom
-            FROM NIVEAU_MATERIAU
-            WHERE nom IS NOT NULL
-            ORDER BY nom
-            """
+        rows = self._execute(
+            text(
+                f"""
+                SELECT DISTINCT TOP ({self.MAX_VALUES})
+                    nom
+                FROM NIVEAU_MATERIAU
+                WHERE nom IS NOT NULL
+                ORDER BY nom
+                """
+            )
         )
 
-        rows = self.db.execute(
-            sql
-        ).fetchall()
-
-        context = []
-
-        context.append("")
-        context.append("KNOWN MATERIALS")
-        context.append("----------------")
-
-        for row in rows:
-
-            context.append(
+        return self._build_section(
+            "KNOWN MATERIALS",
+            [
                 row.nom
-            )
+                for row in rows
+            ],
+        )
 
-        context.append("")
-
-        return context
-
-    # =====================================================
+    # ==========================================================
     # Products
-    # =====================================================
+    # ==========================================================
 
     def _get_products(
         self,
         products: list[str],
     ) -> list[str]:
 
-        context = []
+        values = []
 
-        context.append("")
-        context.append("MATCHING PRODUCTS")
-        context.append("----------------")
+        sql = text(
+            """
+            SELECT DISTINCT nom
+            FROM NIVEAU_MATERIAU
+            WHERE nom LIKE :value
+            ORDER BY nom
+            """
+        )
 
         for product in products:
 
-            sql = text(
-                """
-                SELECT DISTINCT nom
-                FROM NIVEAU_MATERIAU
-                WHERE nom LIKE :value
-                ORDER BY nom
-                """
-            )
-
-            rows = self.db.execute(
+            rows = self._execute(
                 sql,
                 {
                     "value": f"%{product}%"
-                }
-            ).fetchall()
+                },
+            )
 
-            for row in rows:
+            values.extend(
+                row.nom
+                for row in rows
+            )
 
-                context.append(
-                    row.nom
-                )
+        values = sorted(
+            set(values)
+        )
 
-        context.append("")
+        return self._build_section(
+            "MATCHING PRODUCTS",
+            values,
+        )
 
-        return context
+    # ==========================================================
+    # Years
+    # ==========================================================
+
+    def _format_years(
+        self,
+        years: list[int],
+    ) -> list[str]:
+
+        return self._build_section(
+            "REQUESTED YEARS",
+            [
+                str(year)
+                for year in years
+            ],
+        )

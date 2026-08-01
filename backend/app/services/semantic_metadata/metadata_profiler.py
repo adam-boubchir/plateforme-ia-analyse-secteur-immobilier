@@ -1,20 +1,20 @@
-from app.services.metadata_service import MetadataService
-
-from app.services.semantic_metadata.semantic_type_detector import (
-    SemanticTypeDetector,
-)
-
-from app.services.semantic_metadata.statistics_extractor import (
-    StatisticsExtractor,
-)
-
-from app.services.semantic_metadata.example_value_extractor import (
-    ExampleValueExtractor,
-)
+from __future__ import annotations
 
 from app.database.repositories.column_metadata_repository import (
     ColumnMetadataRepository,
 )
+from app.services.metadata_service import MetadataService
+from app.services.semantic_metadata.example_value_extractor import (
+    ExampleValueExtractor,
+)
+from app.services.semantic_metadata.semantic_type_detector import (
+    SemanticTypeDetector,
+)
+from app.services.semantic_metadata.statistics_extractor import (
+    StatisticsExtractor,
+)
+
+__all__ = ["MetadataProfiler"]
 
 
 class MetadataProfiler:
@@ -29,69 +29,64 @@ class MetadataProfiler:
         statistics_extractor: StatisticsExtractor,
         example_extractor: ExampleValueExtractor,
         column_repository: ColumnMetadataRepository,
-    ):
-
+    ) -> None:
         self.metadata_service = metadata_service
-
         self.semantic_detector = semantic_detector
-
         self.statistics_extractor = statistics_extractor
-
         self.example_extractor = example_extractor
-
         self.column_repository = column_repository
 
-    def profile_database(
+    # ------------------------------------------------------------------
+    # PUBLIC
+    # ------------------------------------------------------------------
+
+    def profile_database(self) -> None:
+        """
+        Profile every table of the metadata catalog.
+        """
+
+        for table in self.metadata_service.get_tables():
+            self._profile_table(table.table_name)
+
+    # ------------------------------------------------------------------
+    # PRIVATE
+    # ------------------------------------------------------------------
+
+    def _profile_table(
         self,
+        table_name: str,
     ) -> None:
         """
-        Profile every table.
+        Profile every column of one table.
         """
 
-        tables = self.metadata_service.get_tables()
+        columns = self.metadata_service.get_columns(table_name)
 
-        for table in tables:
+        for column in columns:
+            self._profile_column(column)
 
-            print(f"\nProfiling table : {table.table_name}")
-
-            columns = self.metadata_service.get_columns(
-                table.table_name
-            )
-
-            for column in columns:
-
-                self.profile_column(column)
-
-    def profile_column(
+    def _profile_column(
         self,
         column,
     ) -> None:
         """
-        Profile one column.
+        Profile one database column.
         """
-
-        print(
-            f"   -> {column.column_name}"
-        )
 
         semantic_type = self.semantic_detector.detect(
             column.column_name
         )
 
-        statistics = (
-            self.statistics_extractor.extract(
-                table_name=column.table_name,
-                column_name=column.column_name,
-                data_type=column.data_type,
-            )
+        statistics = self.statistics_extractor.extract(
+            table_name=column.table_name,
+            column_name=column.column_name,
+            data_type=column.data_type,
         )
 
-        example_values = (
-            self.example_extractor.extract(
-                table_name=column.table_name,
-                column_name=column.column_name,
-                data_type=column.data_type,
-            )
+        example_values = self.example_extractor.extract(
+            table_name=column.table_name,
+            column_name=column.column_name,
+            data_type=column.data_type,
         )
 
         self.column_repository.update_profile(

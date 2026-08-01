@@ -1,15 +1,14 @@
+from typing import Type
+
 from app.models.agent_models import (
     ModelConfig,
 )
-
 from app.services.providers.azure_provider import (
     AzureProvider,
 )
-
 from app.services.providers.ollama_provider import (
     OllamaProvider,
 )
-
 from app.services.providers.openai_provider import (
     OpenAIProvider,
 )
@@ -26,18 +25,14 @@ class ProviderFactory:
     • OpenAI
     • Ollama
 
-    New providers can easily be added
-    without modifying the rest of the project.
+    New providers can be registered without
+    modifying the rest of the project.
     """
 
-    _PROVIDERS = {
-
+    _PROVIDERS: dict[str, Type] = {
         "azure": AzureProvider,
-
         "openai": OpenAIProvider,
-
         "ollama": OllamaProvider,
-
     }
 
     # ==========================================================
@@ -53,27 +48,25 @@ class ProviderFactory:
         Return an instance of the configured provider.
         """
 
-        provider_name = (
-            config.provider.lower().strip()
+        provider_name: str = (
+            config.provider
+            .strip()
+            .lower()
         )
 
-        provider_class = cls._PROVIDERS.get(
-            provider_name
+        provider_class: Type | None = cls._PROVIDERS.get(
+            provider_name,
         )
 
         if provider_class is None:
 
             supported = ", ".join(
-                sorted(
-                    cls._PROVIDERS.keys()
-                )
+                cls.supported_providers()
             )
 
             raise ValueError(
-
                 f"Unsupported provider '{config.provider}'. "
                 f"Supported providers: {supported}"
-
             )
 
         return provider_class()
@@ -82,21 +75,14 @@ class ProviderFactory:
     def register_provider(
         cls,
         name: str,
-        provider_class,
+        provider_class: Type,
     ) -> None:
         """
-        Register a new provider dynamically.
-
-        Example
-        -------
-        ProviderFactory.register_provider(
-            "gemini",
-            GeminiProvider,
-        )
+        Register a new provider.
         """
 
         cls._PROVIDERS[
-            name.lower()
+            name.strip().lower()
         ] = provider_class
 
     @classmethod
@@ -104,9 +90,14 @@ class ProviderFactory:
         cls,
     ) -> list[str]:
         """
-        Return the list of supported providers.
+        Return the supported providers.
         """
 
         return sorted(
-            cls._PROVIDERS.keys()
+            cls._PROVIDERS.keys(),
         )
+
+
+__all__ = [
+    "ProviderFactory",
+]

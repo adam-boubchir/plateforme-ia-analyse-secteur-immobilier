@@ -1,25 +1,30 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+__all__ = [
+    "Rule",
+    "RULES",
+]
 
 
-@dataclass
+@dataclass(slots=True)
 class Rule:
     """
-    Represents one business rule used by the KnowledgeSelector.
+    Represents a business rule used by the KnowledgeSelector.
 
-    Each rule describes:
-
-    - keywords triggering the rule
-    - database tables
-    - business domain
-    - SQL pattern
-    - execution flags
+    A rule defines:
+    - keywords that activate it;
+    - related database tables;
+    - business metadata;
+    - SQL generation hints.
     """
 
     name: str
 
-    keywords: list[str]
+    keywords: list[str] = field(default_factory=list)
 
-    tables: list[str]
+    tables: list[str] = field(default_factory=list)
 
     business_domain: str | None = None
 
@@ -40,18 +45,15 @@ class Rule:
 # BUSINESS RULES
 # ==========================================================
 
-RULES = [
+RULES: list[Rule] = [
 
     # ======================================================
     # CONSTRUCTION MATERIALS
     # ======================================================
 
     Rule(
-
         name="Construction Materials",
-
         keywords=[
-
             "ciment",
             "acier",
             "fer",
@@ -63,22 +65,15 @@ RULES = [
             "bois",
             "matériau",
             "materiau",
-
         ],
-
         tables=[
-
             "FACT_PRIX_INDICES",
             "NIVEAU_MATERIAU",
             "REGION",
             "PROVINCE_PREFECTURE",
-
         ],
-
         business_domain="Construction Materials",
-
         needs_join=True,
-
     ),
 
     # ======================================================
@@ -86,11 +81,8 @@ RULES = [
     # ======================================================
 
     Rule(
-
         name="Housing",
-
         keywords=[
-
             "loyer",
             "loyers",
             "location",
@@ -100,23 +92,16 @@ RULES = [
             "logement",
             "caution",
             "honoraire",
-
         ],
-
         tables=[
-
             "FACT_INDICATEUR_HABITAT",
             "TYPE_HABITAT",
             "REGION",
             "PROVINCE_PREFECTURE",
             "COMMUNE",
-
         ],
-
         business_domain="Rental Market",
-
         needs_join=True,
-
     ),
 
     # ======================================================
@@ -124,26 +109,16 @@ RULES = [
     # ======================================================
 
     Rule(
-
         name="Average",
-
         keywords=[
-
             "moyenne",
             "moyen",
             "average",
             "avg",
-
         ],
-
-        tables=[],
-
         question_type="Average",
-
         sql_pattern="Aggregate",
-
         aggregation=True,
-
     ),
 
     # ======================================================
@@ -151,11 +126,8 @@ RULES = [
     # ======================================================
 
     Rule(
-
         name="Ranking",
-
         keywords=[
-
             "top",
             "classement",
             "plus cher",
@@ -165,15 +137,9 @@ RULES = [
             "meilleur",
             "plus élevé",
             "plus bas",
-
         ],
-
-        tables=[],
-
         question_type="Ranking",
-
         sql_pattern="Ranking",
-
     ),
 
     # ======================================================
@@ -181,11 +147,8 @@ RULES = [
     # ======================================================
 
     Rule(
-
         name="Comparison",
-
         keywords=[
-
             "compare",
             "comparer",
             "comparaison",
@@ -193,17 +156,10 @@ RULES = [
             "versus",
             "différence",
             "difference",
-
         ],
-
-        tables=[],
-
         question_type="Comparison",
-
         sql_pattern="Comparison",
-
         aggregation=True,
-
     ),
 
     # ======================================================
@@ -211,29 +167,18 @@ RULES = [
     # ======================================================
 
     Rule(
-
         name="Evolution",
-
         keywords=[
-
             "évolution",
             "evolution",
             "historique",
             "tendance",
             "progression",
-
         ],
-
-        tables=[],
-
         question_type="Evolution",
-
         sql_pattern="Evolution",
-
         aggregation=True,
-
         time_series=True,
-
     ),
 
     # ======================================================
@@ -241,11 +186,8 @@ RULES = [
     # ======================================================
 
     Rule(
-
         name="Geographic",
-
         keywords=[
-
             "région",
             "region",
             "province",
@@ -253,21 +195,13 @@ RULES = [
             "prefecture",
             "commune",
             "ville",
-
         ],
-
         tables=[
-
             "REGION",
             "PROVINCE_PREFECTURE",
             "COMMUNE",
-
         ],
-
         geographic=True,
-
         needs_join=True,
-
     ),
-
 ]

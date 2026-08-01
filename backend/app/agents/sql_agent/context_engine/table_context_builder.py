@@ -1,89 +1,123 @@
-from app.services.metadata_service import (
-    MetadataService,
-)
+from __future__ import annotations
+
+from typing import Any
+
+from app.services.metadata_service import MetadataService
+
+__all__ = ["TableContextBuilder"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+SECTION_SEPARATOR = "=" * 100
+SECTION_TITLE = "DATABASE TABLES"
+COLUMN_TITLE = "Columns:"
 
 
 class TableContextBuilder:
     """
-    Build the DATABASE TABLES section of the SQL context.
+    Build the database tables section of the SQL context.
 
-    Only the selected tables are included in the context.
+    Only the selected tables are included in the generated context.
     """
 
     def __init__(
         self,
         metadata_service: MetadataService,
-    ):
+    ) -> None:
+        self.metadata_service = metadata_service
 
-        self.metadata_service = (
-            metadata_service
-        )
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
 
     def build(
         self,
         selected_tables: list[str],
     ) -> list[str]:
         """
-        Build the tables section using only
-        the selected tables.
+        Build the database tables section.
         """
 
-        context = []
-
-        context.append(
-            "DATABASE TABLES"
-        )
-
-        context.append("")
-
-        tables = [
-
-            table
-
-            for table in self.metadata_service.get_tables()
-
-            if table.table_name in selected_tables
-
+        context = [
+            SECTION_TITLE,
+            "",
         ]
 
-        for table in tables:
-
+        for table in self._get_selected_tables(
+            selected_tables,
+        ):
             context.extend(
-
                 self._build_table(
-                    table
+                    table,
                 )
-
             )
 
-        context.append(
-            "=" * 100
+        context.extend(
+            [
+                SECTION_SEPARATOR,
+                "",
+            ]
         )
-
-        context.append("")
 
         return context
 
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _get_selected_tables(
+        self,
+        selected_tables: list[str],
+    ) -> list[Any]:
+        """
+        Return only the selected metadata tables.
+        """
+
+        return [
+            table
+            for table in self.metadata_service.get_tables()
+            if table.table_name in selected_tables
+        ]
+
     def _build_table(
         self,
-        table,
+        table: Any,
     ) -> list[str]:
         """
         Build one table description.
         """
 
-        context = []
+        context = [
+            f"TABLE : {table.table_name}",
+            *self._build_table_metadata(table),
+            COLUMN_TITLE,
+            *self._build_columns(
+                self.metadata_service.get_columns(
+                    table.table_name,
+                )
+            ),
+            "",
+        ]
 
-        context.append(
-            f"TABLE : {table.table_name}"
-        )
+        return context
+
+    def _build_table_metadata(
+        self,
+        table: Any,
+    ) -> list[str]:
+        """
+        Build metadata describing one table.
+        """
+
+        metadata: list[str] = []
 
         if hasattr(
             table,
             "table_type",
         ):
-
-            context.append(
+            metadata.append(
                 f"Type : {table.table_type}"
             )
 
@@ -91,8 +125,7 @@ class TableContextBuilder:
             table,
             "row_count",
         ):
-
-            context.append(
+            metadata.append(
                 f"Rows : {table.row_count}"
             )
 
@@ -100,105 +133,71 @@ class TableContextBuilder:
             table,
             "is_fact_table",
         ):
-
-            if table.is_fact_table:
-
-                context.append(
-                    "Category : FACT TABLE"
-                )
-
-            else:
-
-                context.append(
-                    "Category : DIMENSION TABLE"
-                )
-
-        context.append(
-            "Columns:"
-        )
-
-        columns = self.metadata_service.get_columns(
-            table.table_name
-        )
-
-        for column in columns:
-
-            context.append(
-
-                self._build_column(
-                    column
-                )
-
+            metadata.append(
+                "Category : FACT TABLE"
+                if table.is_fact_table
+                else "Category : DIMENSION TABLE"
             )
 
-        context.append("")
+        return metadata
 
-        return context
+    def _build_columns(
+        self,
+        columns: list[Any],
+    ) -> list[str]:
+        """
+        Build all column descriptions.
+        """
+
+        return [
+            self._build_column(column)
+            for column in columns
+        ]
 
     def _build_column(
         self,
-        column,
+        column: Any,
     ) -> str:
         """
         Build one column description.
         """
 
-        flags = []
+        flags: list[str] = []
 
         if column.is_primary_key:
-
-            flags.append(
-                "PK"
-            )
+            flags.append("PK")
 
         if column.is_foreign_key:
+            flags.append("FK")
 
-            flags.append(
-                "FK"
-            )
-
-        flag_text = ""
-
-        if flags:
-
-            flag_text = (
-
-                " ["
-
-                + ", ".join(flags)
-
-                + "]"
-
-            )
-
-        length = ""
-
-        if column.max_length:
-
-            length = (
-                f"({column.max_length})"
-            )
-
-        line = (
-
-            f"  • {column.column_name}"
-
-            f" : {column.data_type}"
-
-            f"{length}"
-
-            f"{flag_text}"
-
+        flag_text = (
+            f" [{', '.join(flags)}]"
+            if flags
+            else ""
         )
 
-        if getattr(
+        length = (
+            f"({column.max_length})"
+            if column.max_length
+            else ""
+        )
+
+        line = (
+            f"  • {column.column_name}"
+            f" : {column.data_type}"
+            f"{length}"
+            f"{flag_text}"
+        )
+
+        semantic_type = getattr(
             column,
             "semantic_type",
             None,
-        ):
+        )
 
+        if semantic_type:
             line += (
-                f" | Semantic={column.semantic_type}"
+                f" | Semantic={semantic_type}"
             )
 
         return line

@@ -1,105 +1,97 @@
+from __future__ import annotations
+
 import re
+from typing import Final
 
 from app.services.semantic_metadata.semantic_keyword_service import (
     SemanticKeywordService,
 )
 
+__all__ = ["SemanticTypeDetector"]
+
+CAMEL_CASE_PATTERN: Final[str] = r"([a-z])([A-Z])"
+
 
 class SemanticTypeDetector:
     """
-    Detect the semantic type of a table or column.
+    Detect the semantic type of a table or column name.
     """
 
     def __init__(
         self,
         keyword_service: SemanticKeywordService,
-    ):
-
+    ) -> None:
         self.keyword_service = keyword_service
+
+    # ------------------------------------------------------------------
+    # PUBLIC
+    # ------------------------------------------------------------------
 
     def detect(
         self,
         text: str,
     ) -> str | None:
         """
-        Detect the semantic type.
-
-        Example:
-
-        nom_region
-            ->
-        REGION
-
-        prix_moyen
-            ->
-        MEASURE
+        Detect the semantic type associated with a column or table name.
         """
 
-        tokens = self._tokenize(text)
-
         best_score = -1
+        best_semantic: str | None = None
 
-        best_semantic = None
+        for token in self._tokenize(text):
 
-        for token in tokens:
-
-            keyword = self.keyword_service.find(
-                token
-            )
+            keyword = self.keyword_service.find(token)
 
             if keyword is None:
                 continue
 
-            if keyword["score"] > best_score:
+            score = keyword["score"]
 
-                best_score = keyword["score"]
+            if score <= best_score:
+                continue
 
-                best_semantic = keyword[
-                    "semantic_type"
-                ]
+            best_score = score
+            best_semantic = keyword["semantic_type"]
 
         return best_semantic
+
+    # ------------------------------------------------------------------
+    # PRIVATE
+    # ------------------------------------------------------------------
 
     def _tokenize(
         self,
         text: str,
     ) -> list[str]:
         """
-        Split a name into tokens.
+        Split a database identifier into normalized tokens.
 
         Examples
-
+        --------
         nom_region
-            ->
-        ["nom","region"]
+            -> ["nom", "region"]
 
         prixMoyen
-            ->
-        ["prix","moyen"]
+            -> ["prix", "moyen"]
 
-        id_region
-            ->
-        ["id","region"]
+        id-region
+            -> ["id", "region"]
         """
 
-        text = re.sub(
-            r"([a-z])([A-Z])",
+        normalized = re.sub(
+            CAMEL_CASE_PATTERN,
             r"\1 \2",
             text,
         )
 
-        text = text.replace("_", " ")
+        normalized = (
+            normalized
+            .replace("_", " ")
+            .replace("-", " ")
+        )
 
-        text = text.replace("-", " ")
-
-        tokens = []
-
-        for token in text.split():
-
-            token = token.strip().lower()
-
-            if token:
-
-                tokens.append(token)
-
-        return tokens
+        return [
+            token.casefold()
+            for token in normalized.split()
+            if token.strip()
+        ]

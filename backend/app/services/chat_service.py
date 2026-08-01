@@ -1,17 +1,17 @@
-from app.agents.sql_agent.sql_agent import (
-    SQLAgent,
+from app.agents.orchestrator.orchestrator_service import (
+    OrchestratorService,
 )
-
-from app.models.sql_agent_models import (
-    SQLAgentResponse,
+from app.database.entities.conversation import (
+    Conversation,
 )
-
-from app.services.conversation_service import (
-    ConversationService,
+from app.models.agent_response import (
+    AgentResponse,
 )
-
 from app.services.conversation_message_service import (
     ConversationMessageService,
+)
+from app.services.conversation_service import (
+    ConversationService,
 )
 
 
@@ -23,23 +23,31 @@ class ChatService:
     ----------------
     • Manage conversations
     • Store user messages
-    • Delegate the question to the appropriate AI agent
+    • Delegate requests to the Orchestrator
     • Store assistant responses
     • Update conversation metadata
     """
 
+    DEFAULT_CONVERSATION_TITLE = "Nouvelle conversation"
+
     def __init__(
         self,
-        sql_agent: SQLAgent,
+        orchestrator_service: OrchestratorService,
         conversation_service: ConversationService,
         message_service: ConversationMessageService,
-    ):
+    ) -> None:
 
-        self.sql_agent = sql_agent
+        self.orchestrator_service: OrchestratorService = (
+            orchestrator_service
+        )
 
-        self.conversation_service = conversation_service
+        self.conversation_service: ConversationService = (
+            conversation_service
+        )
 
-        self.message_service = message_service
+        self.message_service: ConversationMessageService = (
+            message_service
+        )
 
     # ==========================================================
     # PUBLIC
@@ -49,71 +57,44 @@ class ChatService:
         self,
         question: str,
         conversation_uuid: str | None = None,
-    ) -> SQLAgentResponse:
+    ) -> AgentResponse:
         """
-        Process one user question.
+        Process a user request.
         """
 
-        conversation = self._get_or_create_conversation(
-            conversation_uuid
+        conversation: Conversation = (
+            self._get_or_create_conversation(
+                conversation_uuid=conversation_uuid,
+            )
         )
-
-        # ------------------------------------------------------
-        # Store user message
-        # ------------------------------------------------------
 
         self.message_service.add_user_message(
-
             conversation_id=conversation.id,
-
             content=question,
-
         )
 
-        # ------------------------------------------------------
-        # SQL Agent
-        # ------------------------------------------------------
-
-        response = self.sql_agent.ask(
-
-            question=question,
-
-            conversation_id=conversation.id,
-
+        response: AgentResponse = (
+            self.orchestrator_service.route(
+                question=question,
+                conversation_id=conversation.id,
+            )
         )
-
-        # ------------------------------------------------------
-        # Store assistant message
-        # ------------------------------------------------------
 
         self.message_service.add_assistant_message(
-
             conversation_id=conversation.id,
-
             content=response.answer,
-
             generated_sql=response.sql,
-
             rows_returned=len(response.rows),
-
             rows=response.rows,
-
         )
 
-        # ------------------------------------------------------
-        # Update conversation metadata
-        # ------------------------------------------------------
-
         self.conversation_service.update_last_message(
-            conversation
+            conversation=conversation,
         )
 
         self._update_title_if_needed(
-
-            conversation,
-
-            question,
-
+            conversation=conversation,
+            question=question,
         )
 
         response.conversation_uuid = (
@@ -129,27 +110,21 @@ class ChatService:
     def _get_or_create_conversation(
         self,
         conversation_uuid: str | None,
-    ):
+    ) -> Conversation:
         """
-        Retrieve or create a conversation.
+        Retrieve an existing conversation or create a new one.
         """
 
         if conversation_uuid is None:
-
             return self.conversation_service.create(
-
-                title="Nouvelle conversation"
-
+                title=self.DEFAULT_CONVERSATION_TITLE,
             )
 
         conversation = self.conversation_service.get_by_uuid(
-
-            conversation_uuid
-
+            conversation_uuid=conversation_uuid,
         )
 
         if conversation is None:
-
             raise ValueError(
                 "Conversation not found."
             )
@@ -158,25 +133,24 @@ class ChatService:
 
     def _update_title_if_needed(
         self,
-        conversation,
+        conversation: Conversation,
         question: str,
     ) -> None:
         """
-        Automatically generate the title of a new conversation.
+        Automatically set the conversation title
+        from the first user message.
         """
 
         if (
-
             conversation.title is None
-
-            or conversation.title == "Nouvelle conversation"
-
+            or conversation.title == self.DEFAULT_CONVERSATION_TITLE
         ):
-
             self.conversation_service.update_title(
-
-                conversation,
-
-                question.strip()[:60],
-
+                conversation=conversation,
+                title=question.strip()[:60],
             )
+
+
+__all__ = [
+    "ChatService",
+]

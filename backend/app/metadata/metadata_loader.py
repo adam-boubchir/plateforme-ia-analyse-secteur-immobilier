@@ -14,7 +14,7 @@ from app.database.repositories.relationship_repository import (
     RelationshipRepository,
 )
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database.entities.table_metadata import TableMetadataEntity
 
@@ -22,9 +22,21 @@ from app.database.entities.column_metadata import ColumnMetadataEntity
 
 from app.database.entities.relationship import RelationshipEntity
 
+from __future__ import annotations
+
 import logging
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["MetadataLoader"]
+
+# ==========================================================
+# CONSTANTS
+# ==========================================================
+
+FACT_TABLE_PREFIX = "FACT_"
+
+FOREIGN_KEY_RELATIONSHIP = "FOREIGN KEY"
 
 class MetadataLoader:
     """
@@ -57,15 +69,7 @@ class MetadataLoader:
 
         try:
 
-            self.relationship_repository.delete_all()
-
-            self.column_repository.delete_all()
-
-            self.db.flush()
-
-            self.table_repository.delete_all()
-
-            self.db.flush()
+            self._clear_metadata()
 
             self._load_tables(report)
 
@@ -85,6 +89,47 @@ class MetadataLoader:
 
             raise
 
+    def _clear_metadata(self) -> None:
+        """
+        Remove all existing metadata before loading a new audit.
+        """
+
+        self.relationship_repository.delete_all()
+
+        self.column_repository.delete_all()
+
+        self.db.flush()
+
+        self.table_repository.delete_all()
+
+        self.db.flush()
+
+    def _build_table_entity(
+        self,
+        report: AuditReport,
+        table,
+        row_count: int,
+    ) -> TableMetadataEntity:
+        """
+        Build one table metadata entity.
+        """
+
+        return TableMetadataEntity(
+            source_database=report.server.database_name,
+            schema_name=table.schema_name,
+            table_name=table.name,
+            table_type=table.table_type,
+            business_name=None,
+            description=None,
+            row_count=row_count,
+            is_fact_table=table.name.upper().startswith(
+                FACT_TABLE_PREFIX
+            ),
+            is_active=True,
+            last_refresh=datetime.now(timezone.utc),
+            updated_at=None,
+        )
+
     def _load_tables(
         self,
         report: AuditReport,
@@ -93,9 +138,9 @@ class MetadataLoader:
         Load all tables into table_metadata.
         """
 
-        entities = []
+        entities: list[TableMetadataEntity] = []
 
-        row_counts = {
+        row_counts: dict[tuple[str, str], int] = {
 
             (
                 stat.schema_name,
@@ -108,43 +153,67 @@ class MetadataLoader:
 
         for table in report.tables:
 
-            entity = TableMetadataEntity(
-
-                source_database=report.server.database_name,
-
-                schema_name=table.schema_name,
-
-                table_name=table.name,
-
-                table_type=table.table_type,
-
-                business_name=None,
-
-                description=None,
-
-                row_count=row_counts.get(
-                    (
-                        table.schema_name,
-                        table.name
+            entities.append(
+                self._build_table_entity(
+                    report,
+                    table,
+                    row_counts.get(
+                        (
+                            table.schema_name,
+                            table.name,
+                        ),
+                        0,
                     ),
-                    0
-                ),
-
-                is_fact_table=table.name.upper().startswith("FACT_"),
-
-                is_active=True,
-
-                last_refresh=datetime.utcnow(),
-
-                updated_at=None,
+                )
             )
-
-            entities.append(entity)
 
         self.table_repository.create_many(entities)
 
         self.db.flush()
-    
+
+    def _build_column_entity(
+        self,
+        column,
+        table_id: int,
+        primary_keys: set[tuple[str, str, str]],
+        foreign_keys: set[tuple[str, str, str]],
+    ) -> ColumnMetadataEntity:
+        """
+        Build one column metadata entity.
+        """
+
+        return ColumnMetadataEntity(
+            table_id=table_id,
+            schema_name=column.schema_name,
+            table_name=column.table,
+            column_name=column.name,
+            business_name=None,
+            description=None,
+            data_type=column.data_type,
+            max_length=column.max_length,
+            ordinal_position=None,
+            default_value=column.default_value,
+            is_nullable=column.nullable,
+            is_primary_key=(
+                (
+                    column.schema_name,
+                    column.table,
+                    column.name,
+                )
+                in primary_keys
+            ),
+            is_foreign_key=(
+                (
+                    column.schema_name,
+                    column.table,
+                    column.name,
+                )
+                in foreign_keys
+            ),
+            sample_values=None,
+            updated_at=None,
+        )
+        
     def _load_columns(
         self,
         report: AuditReport,
@@ -152,9 +221,10 @@ class MetadataLoader:
         """
         Load all columns into column_metadata.
         """
-        entities = []
+        entities: list[ColumnMetadataEntity] = []
 
-        primary_keys = {
+
+        primary_keys: set[tuple[str, str, str]] = {
             (
                 pk.schema_name,
                 pk.table,
@@ -163,7 +233,7 @@ class MetadataLoader:
             for pk in report.primary_keys
         }
 
-        foreign_keys = {
+        foreign_keys: set[tuple[str, str, str]] = {
             (
                 fk.source_schema,
                 fk.source_table,
@@ -172,7 +242,7 @@ class MetadataLoader:
             for fk in report.foreign_keys
         }
 
-        table_ids = {
+        table_ids: dict[tuple[str, str], int] = {
             (
                 table.schema_name,
                 table.table_name
@@ -182,62 +252,49 @@ class MetadataLoader:
 
         for column in report.columns:
 
-            entity = ColumnMetadataEntity(
-
-                table_id=table_ids[
-                    (
-                        column.schema_name,
-                        column.table
-                    )
-                ],
-
-                schema_name=column.schema_name,
-
-                table_name=column.table,
-
-                column_name=column.name,
-
-                business_name=None,
-
-                description=None,
-
-                data_type=column.data_type,
-
-                max_length=column.max_length,
-
-                ordinal_position=None,
-
-                default_value=column.default_value,
-
-                is_nullable=column.nullable,
-
-                is_primary_key=(
-                    (
-                        column.schema_name,
-                        column.table,
-                        column.name
-                    )
-                    in primary_keys
-                ),
-
-                is_foreign_key=(
-                    (
-                        column.schema_name,
-                        column.table,
-                        column.name
-                    )
-                    in foreign_keys
-                ),
-
-                sample_values=None,
-
-                updated_at=None,
+            table_id = table_ids.get(
+                (
+                    column.schema_name,
+                    column.table,
+                )
             )
 
-            entities.append(entity)
+            if table_id is None:
+                continue
+
+            entities.append(
+                self._build_column_entity(
+                    column=column,
+                    table_id=table_id,
+                    primary_keys=primary_keys,
+                    foreign_keys=foreign_keys,
+                )
+            )
 
         self.column_repository.create_many(entities)
-    
+
+    def _build_relationship_entity(
+        self,
+        fk,
+    ) -> RelationshipEntity:
+        """
+        Build one relationship metadata entity.
+        """
+
+        return RelationshipEntity(
+            constraint_name=fk.constraint_name,
+            source_schema=fk.source_schema,
+            source_table=fk.source_table,
+            source_column=fk.source_column,
+            target_schema=fk.target_schema,
+            target_table=fk.target_table,
+            target_column=fk.target_column,
+            relationship_type=FOREIGN_KEY_RELATIONSHIP,
+            description=None,
+            is_active=True,
+            updated_at=None,
+        )
+        
     def _load_relationships(
         self,
         report: AuditReport,
@@ -246,36 +303,15 @@ class MetadataLoader:
         Load all foreign key relationships into relationships.
         """
 
-        entities = []
+        entities: list[RelationshipEntity] = []
 
         for fk in report.foreign_keys:
 
-            entity = RelationshipEntity(
-
-                constraint_name=fk.constraint_name,
-
-                source_schema=fk.source_schema,
-
-                source_table=fk.source_table,
-
-                source_column=fk.source_column,
-
-                target_schema=fk.target_schema,
-
-                target_table=fk.target_table,
-
-                target_column=fk.target_column,
-
-                relationship_type="FOREIGN KEY",
-
-                description=None,
-
-                is_active=True,
-
-                updated_at=None,
+            entities.append(
+                self._build_relationship_entity(
+                    fk,
+                )
             )
-
-            entities.append(entity)
 
         self.relationship_repository.create_many(entities)
 

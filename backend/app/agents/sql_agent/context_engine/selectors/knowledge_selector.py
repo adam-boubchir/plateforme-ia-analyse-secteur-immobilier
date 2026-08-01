@@ -1,43 +1,59 @@
-from app.agents.sql_agent.entity_detector import (
-    EntityDetector,
-)
+from __future__ import annotations
 
-from app.knowledge.database_knowledge import (
-    DATABASE_KNOWLEDGE,
-)
+from typing import Any
 
 from app.agents.sql_agent.context_engine.selectors.rule_engine import (
     RuleEngine,
 )
-
 from app.agents.sql_agent.context_engine.selectors.scoring import (
     RuleScorer,
 )
+from app.agents.sql_agent.entity_detector import (
+    EntityDetector,
+)
+from app.knowledge.database_knowledge import (
+    DATABASE_KNOWLEDGE,
+)
+
+__all__ = ["KnowledgeSelector"]
+
+MIN_YEAR = 1990
+MAX_YEAR = 2035
+
+DEFAULT_SELECTION: dict[str, Any] = {
+    "tables": set(),
+    "business_domains": set(),
+    "question_types": set(),
+    "sql_patterns": set(),
+    "needs_join": False,
+    "aggregation": False,
+    "geographic": False,
+    "time_series": False,
+}
 
 
 class KnowledgeSelector:
     """
-    Intelligent selector responsible for identifying
-    the business context of the user's question.
+    Select the business knowledge required to answer a user question.
 
-    This class orchestrates:
-
-        • Entity Detection
-        • Rule Engine
-        • Rule Scoring
-
-    and produces the context used by the SQL Agent.
+    Responsibilities
+    ----------------
+    - Detect entities.
+    - Evaluate business rules.
+    - Score activated rules.
+    - Enrich the selection.
+    - Produce the knowledge context.
     """
 
     def __init__(
         self,
-    ):
-
-        self.entity_detector = EntityDetector()
-
-        self.rule_engine = RuleEngine()
-
-        self.rule_scorer = RuleScorer()
+        entity_detector: EntityDetector,
+        rule_engine: RuleEngine,
+        rule_scorer: RuleScorer,
+    ) -> None:
+        self.entity_detector = entity_detector
+        self.rule_engine = rule_engine
+        self.rule_scorer = rule_scorer
 
     # ==========================================================
     # PUBLIC
@@ -46,224 +62,165 @@ class KnowledgeSelector:
     def select(
         self,
         question: str,
-    ) -> dict:
+    ) -> dict[str, Any]:
 
-        entities = self.entity_detector.detect(
-            question
+        entities = self._detect_entities(
+            question,
         )
+
+        scored_rules = self._score_rules(
+            question,
+        )
+
+        selection = self._create_selection()
+
+        self._apply_rules(
+            selection,
+            scored_rules,
+        )
+
+        self._apply_entity_enrichment(
+            selection,
+            entities,
+        )
+
+        self._apply_time_enrichment(
+            selection,
+            question,
+        )
+
+        self._apply_default_tables(
+            selection,
+        )
+
+        return self._build_result(
+            selection,
+            entities,
+        )
+
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    def _create_selection(
+        self,
+    ) -> dict[str, Any]:
+
+        return {
+            key: value.copy() if isinstance(value, set) else value
+            for key, value in DEFAULT_SELECTION.items()
+        }
+
+    def _detect_entities(
+        self,
+        question: str,
+    ) -> dict[str, Any]:
+
+        return self.entity_detector.detect(
+            question,
+        )
+
+    def _score_rules(
+        self,
+        question: str,
+    ) -> list[tuple[Any, float]]:
 
         activated_rules = self.rule_engine.evaluate(
-            question
+            question,
         )
 
-        scored_rules = self.rule_scorer.score(
+        return self.rule_scorer.score(
             question,
             activated_rules,
         )
 
-        selected_tables = set()
+    def _apply_rules(
+        self,
+        selection: dict[str, Any],
+        scored_rules: list[tuple[Any, float]],
+    ) -> None:
 
-        business_domains = set()
+        for rule, _ in scored_rules:
 
-        question_types = set()
-
-        sql_patterns = set()
-
-        needs_join = False
-
-        aggregation = False
-
-        geographic = False
-
-        time_series = False
-
-        # ======================================================
-        # APPLY RULES
-        # ======================================================
-
-        for rule, score in scored_rules:
-
-            selected_tables.update(
-                rule.tables
-            )
+            selection["tables"].update(rule.tables)
 
             if rule.business_domain:
-
-                business_domains.add(
-                    rule.business_domain
+                selection["business_domains"].add(
+                    rule.business_domain,
                 )
 
             if rule.question_type:
-
-                question_types.add(
-                    rule.question_type
+                selection["question_types"].add(
+                    rule.question_type,
                 )
 
             if rule.sql_pattern:
-
-                sql_patterns.add(
-                    rule.sql_pattern
+                selection["sql_patterns"].add(
+                    rule.sql_pattern,
                 )
 
-            needs_join |= rule.needs_join
+            selection["needs_join"] |= rule.needs_join
+            selection["aggregation"] |= rule.aggregation
+            selection["geographic"] |= rule.geographic
+            selection["time_series"] |= rule.time_series
 
-            aggregation |= rule.aggregation
+    def _apply_entity_enrichment(
+        self,
+        selection: dict[str, Any],
+        entities: dict[str, Any],
+    ) -> None:
 
-            geographic |= rule.geographic
+        if entities.get("regions"):
 
-            time_series |= rule.time_series
-
-        # ======================================================
-        # ENTITY-BASED ENRICHMENT
-        # ======================================================
-
-        if entities["regions"]:
-
-            selected_tables.update(
-
-                [
+            selection["tables"].update(
+                {
                     "REGION",
                     "PROVINCE_PREFECTURE",
-                ]
-
+                }
             )
 
-            geographic = True
+            selection["geographic"] = True
 
-        # ======================================================
-        # YEAR DETECTION
-        # ======================================================
+    def _apply_time_enrichment(
+        self,
+        selection: dict[str, Any],
+        question: str,
+    ) -> None:
 
         if any(
-
             str(year) in question
-
-            for year in range(1990, 2036)
-
+            for year in range(
+                MIN_YEAR,
+                MAX_YEAR + 1,
+            )
         ):
+            selection["time_series"] = True
 
-            time_series = True
+    def _apply_default_tables(
+        self,
+        selection: dict[str, Any],
+    ) -> None:
 
-        # ======================================================
-        # DEFAULT
-        # ======================================================
+        if not selection["tables"]:
 
-        if not selected_tables:
-
-            selected_tables = set(
-
-                DATABASE_KNOWLEDGE.keys()
-
+            selection["tables"] = set(
+                DATABASE_KNOWLEDGE.keys(),
             )
 
-        # ======================================================
-        # DEBUG
-        # ======================================================
-
-        self._print_debug(
-
-            question,
-
-            entities,
-
-            scored_rules,
-
-            selected_tables,
-
-        )
-
-        # ======================================================
-        # RESULT
-        # ======================================================
+    def _build_result(
+        self,
+        selection: dict[str, Any],
+        entities: dict[str, Any],
+    ) -> dict[str, Any]:
 
         return {
-
             "entities": entities,
-
-            "tables": sorted(
-                selected_tables
-            ),
-
-            "business_domains": sorted(
-                business_domains
-            ),
-
-            "question_types": sorted(
-                question_types
-            ),
-
-            "sql_patterns": sorted(
-                sql_patterns
-            ),
-
-            "needs_join": needs_join,
-
-            "aggregation": aggregation,
-
-            "geographic": geographic,
-
-            "time_series": time_series,
-
+            "tables": sorted(selection["tables"]),
+            "business_domains": sorted(selection["business_domains"]),
+            "question_types": sorted(selection["question_types"]),
+            "sql_patterns": sorted(selection["sql_patterns"]),
+            "needs_join": selection["needs_join"],
+            "aggregation": selection["aggregation"],
+            "geographic": selection["geographic"],
+            "time_series": selection["time_series"],
         }
-
-    # ==========================================================
-    # DEBUG
-    # ==========================================================
-
-    def _print_debug(
-
-        self,
-
-        question,
-
-        entities,
-
-        scored_rules,
-
-        tables,
-
-    ):
-
-        print("\n")
-
-        print("=" * 100)
-
-        print("KNOWLEDGE SELECTOR")
-
-        print("=" * 100)
-
-        print(f"Question : {question}")
-
-        print()
-
-        print("Detected Entities")
-
-        print(entities)
-
-        print()
-
-        print("Activated Rules")
-
-        for rule, score in scored_rules:
-
-            print(
-
-                f"{score:>3}  ->  {rule.name}"
-
-            )
-
-        print()
-
-        print("Selected Tables")
-
-        for table in sorted(tables):
-
-            print(
-
-                f" - {table}"
-
-            )
-
-        print("=" * 100)
-
-        print()

@@ -1,15 +1,12 @@
 from sqlalchemy import (
+    func,
     select,
 )
-
-from sqlalchemy.orm import (
-    Session,
-)
+from sqlalchemy.orm import Session
 
 from app.database.entities.conversation_log import (
     ConversationLog,
 )
-
 from app.database.repositories.base_repository import (
     BaseRepository,
 )
@@ -23,9 +20,8 @@ class ConversationLogRepository(BaseRepository):
     def __init__(
         self,
         db: Session,
-    ):
-
-        super().__init__(db)
+    ) -> None:
+        super().__init__(db=db)
 
     # ==========================================================
     # CREATE
@@ -39,7 +35,9 @@ class ConversationLogRepository(BaseRepository):
         Persist a new execution log.
         """
 
-        self.add(log)
+        self.add(
+            entity=log,
+        )
 
         self.flush()
 
@@ -57,14 +55,17 @@ class ConversationLogRepository(BaseRepository):
         Retrieve one execution log.
         """
 
-        return self.db.scalar(
-
+        statement = (
             select(
-                ConversationLog
-            ).where(
-                ConversationLog.id == log_id
+                ConversationLog,
             )
+            .where(
+                ConversationLog.id == log_id,
+            )
+        )
 
+        return self.db.scalar(
+            statement,
         )
 
     def get_by_conversation(
@@ -75,25 +76,22 @@ class ConversationLogRepository(BaseRepository):
         Retrieve every execution log of one conversation.
         """
 
-        return list(
-
-            self.db.scalars(
-
-                select(
-                    ConversationLog
-                )
-
-                .where(
-                    ConversationLog.conversation_id
-                    == conversation_id
-                )
-
-                .order_by(
-                    ConversationLog.created_at.desc()
-                )
-
+        statement = (
+            select(
+                ConversationLog,
             )
+            .where(
+                ConversationLog.conversation_id == conversation_id,
+            )
+            .order_by(
+                ConversationLog.created_at.desc(),
+            )
+        )
 
+        return list(
+            self.db.scalars(
+                statement,
+            )
         )
 
     def get_last_by_conversation(
@@ -101,26 +99,24 @@ class ConversationLogRepository(BaseRepository):
         conversation_id: int,
     ) -> ConversationLog | None:
         """
-        Retrieve the latest execution of one conversation.
+        Retrieve the latest execution log of one conversation.
         """
 
-        return self.db.scalar(
-
+        statement = (
             select(
-                ConversationLog
+                ConversationLog,
             )
-
             .where(
-                ConversationLog.conversation_id
-                == conversation_id
+                ConversationLog.conversation_id == conversation_id,
             )
-
             .order_by(
-                ConversationLog.created_at.desc()
+                ConversationLog.created_at.desc(),
             )
-
             .limit(1)
+        )
 
+        return self.db.scalar(
+            statement,
         )
 
     def count_by_conversation(
@@ -128,17 +124,25 @@ class ConversationLogRepository(BaseRepository):
         conversation_id: int,
     ) -> int:
         """
-        Return the number of executions
+        Return the number of execution logs
         of one conversation.
         """
 
-        return len(
-
-            self.get_by_conversation(
-                conversation_id
+        statement = (
+            select(
+                func.count(),
             )
-
+            .select_from(
+                ConversationLog,
+            )
+            .where(
+                ConversationLog.conversation_id == conversation_id,
+            )
         )
+
+        return self.db.scalar(
+            statement,
+        ) or 0
 
     def get_all(
         self,
@@ -147,20 +151,19 @@ class ConversationLogRepository(BaseRepository):
         Retrieve every execution log.
         """
 
-        return list(
-
-            self.db.scalars(
-
-                select(
-                    ConversationLog
-                )
-
-                .order_by(
-                    ConversationLog.created_at.desc()
-                )
-
+        statement = (
+            select(
+                ConversationLog,
             )
+            .order_by(
+                ConversationLog.created_at.desc(),
+            )
+        )
 
+        return list(
+            self.db.scalars(
+                statement,
+            )
         )
 
     # ==========================================================
@@ -191,4 +194,11 @@ class ConversationLogRepository(BaseRepository):
         Delete one execution log.
         """
 
-        self.db.delete(log)
+        self.db.delete(
+            log,
+        )
+
+
+__all__ = [
+    "ConversationLogRepository",
+]
