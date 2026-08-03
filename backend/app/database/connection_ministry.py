@@ -1,37 +1,67 @@
-from sqlalchemy import Engine, create_engine
+from __future__ import annotations
 
-from app.database.config import settings
+from urllib.parse import quote_plus
 
+from sqlalchemy import (
+    Engine,
+    create_engine,
+)
 
-# ==========================================================
-# CONNECTION STRING
-# ==========================================================
+from app.database.config import (
+    settings,
+)
 
-ODBC_DRIVER = "ODBC Driver 17 for SQL Server"
-
-CONNECTION_STRING = (
-    f"mssql+pyodbc://"
-    f"{settings.SQL_USERNAME}:{settings.SQL_PASSWORD}"
-    f"@{settings.MINISTRY_SERVER}"
-    f"/{settings.MINISTRY_DATABASE}"
-    f"?driver={ODBC_DRIVER.replace(' ', '+')}"
+__all__ = (
+    "engine_ministry",
 )
 
 
 # ==========================================================
-# SQLALCHEMY ENGINE
+# CONSTANTS
 # ==========================================================
 
+_SQL_SERVER_ODBC_DRIVER = "ODBC Driver 17 for SQL Server"
+
+
+# ==========================================================
+# PRIVATE
+# ==========================================================
+
+def _build_connection_string() -> str:
+    """
+    Build the SQLAlchemy connection string for the
+    Ministry database.
+
+    Returns:
+        A SQLAlchemy connection string.
+    """
+
+    driver = quote_plus(
+        _SQL_SERVER_ODBC_DRIVER,
+    )
+
+    return (
+        "mssql+pyodbc://"
+        f"{settings.SQL_USERNAME}:{settings.SQL_PASSWORD}"
+        f"@{settings.MINISTRY_SERVER}"
+        f"/{settings.MINISTRY_DATABASE}"
+        f"?driver={driver}"
+    )
+
+
+# ==========================================================
+# ENGINE
+# ==========================================================
+
+_MINISTRY_CONNECTION_STRING = _build_connection_string()
+
 engine_ministry: Engine = create_engine(
-    CONNECTION_STRING,
+    _MINISTRY_CONNECTION_STRING,
     pool_pre_ping=True,
     pool_recycle=3600,
     pool_timeout=30,
+    pool_size=10,
+    max_overflow=20,
     echo=False,
     future=True,
 )
-
-
-__all__ = [
-    "engine_ministry",
-]

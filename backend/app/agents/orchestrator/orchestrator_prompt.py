@@ -124,25 +124,52 @@ Responsibilities:
 
 ## report_agent
 
-Reserved for future versions.
+Use this agent when the user requests a written report or analytical document based on database information.
 
-Responsibilities:
-- Report generation
+Typical examples:
+- Reports
 - Executive summaries
-- PDF generation
+- Data analysis
+- Recommendations
+- Studies
+- Business reports
+- Detailed explanations of database results
+
+Example requests:
+- Generate a report on housing prices.
+- Prepare an executive summary.
+- Analyze construction material prices.
+- Write a report comparing regions.
+- Provide recommendations based on market data.
 
 # DECISION RULES
 
 - Always choose exactly one agent.
 - Never invent a new agent.
-- If database access is required, select "sql_agent".
-- Otherwise, select "chat_agent".
+# DECISION RULES
+
+- Always choose exactly one agent.
+- Never invent a new agent.
+
+- Select "chat_agent" for greetings, casual conversation, help or questions that do not require database data.
+
+- Select "sql_agent" when the user wants to retrieve raw data or statistics from the database.
+
+- Select "report_agent" when the user explicitly asks for:
+  - a report
+  - an analysis
+  - an executive summary
+  - recommendations
+  - a study
+  - a detailed interpretation of data
+
 - Never select:
   - dashboard_agent
   - prediction_agent
   - benchmark_agent
-  - report_agent
   unless they are explicitly enabled by the application.
+
+- If uncertain, prefer "chat_agent".
 - If uncertain, always prefer "chat_agent".
 
 # OUTPUT FORMAT

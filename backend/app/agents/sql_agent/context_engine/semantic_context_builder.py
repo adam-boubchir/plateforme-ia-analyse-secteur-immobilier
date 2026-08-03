@@ -2,18 +2,22 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.semantic_context_service import SemanticContextService
+from app.services.semantic_context_service import (
+    SemanticContextService,
+)
 
-__all__ = ["SemanticContextBuilder"]
+__all__ = (
+    "SemanticContextBuilder",
+)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-SECTION_SEPARATOR = "=" * 100
+_SECTION_SEPARATOR = "=" * 100
 
-SECTION_TITLE = "SEMANTIC CONTEXT"
-EXAMPLES_TITLE = "Examples :"
+_SECTION_TITLE = "SEMANTIC CONTEXT"
+_EXAMPLES_TITLE = "Examples :"
 
 
 class SemanticContextBuilder:
@@ -23,9 +27,10 @@ class SemanticContextBuilder:
 
     def __init__(
         self,
+        *,
         semantic_context_service: SemanticContextService,
     ) -> None:
-        self.semantic_context_service = (
+        self._semantic_context_service = (
             semantic_context_service
         )
 
@@ -35,15 +40,23 @@ class SemanticContextBuilder:
 
     def build(
         self,
+        *,
         question: str,
     ) -> list[str]:
         """
         Build the semantic context section.
+
+        Args:
+            question:
+                User natural-language question.
+
+        Returns:
+            Formatted semantic context.
         """
 
         semantic_columns = (
-            self.semantic_context_service.build(
-                question
+            self._semantic_context_service.build(
+                question=question,
             )
         )
 
@@ -51,22 +64,22 @@ class SemanticContextBuilder:
             return []
 
         context = [
-            SECTION_TITLE,
+            _SECTION_TITLE,
             "",
         ]
 
         for column in semantic_columns:
             context.extend(
                 self._build_column(
-                    column,
+                    column=column,
                 )
             )
 
         context.extend(
-            [
-                SECTION_SEPARATOR,
+            (
+                _SECTION_SEPARATOR,
                 "",
-            ]
+            )
         )
 
         return context
@@ -75,12 +88,20 @@ class SemanticContextBuilder:
     # PRIVATE
     # ==========================================================
 
+    @staticmethod
     def _build_column(
-        self,
+        *,
         column: dict[str, Any],
     ) -> list[str]:
         """
         Build one semantic column description.
+
+        Args:
+            column:
+                Semantic metadata describing one column.
+
+        Returns:
+            Formatted lines for the SQL prompt.
         """
 
         context = [
@@ -104,7 +125,7 @@ class SemanticContextBuilder:
         if examples:
             context.extend(
                 [
-                    EXAMPLES_TITLE,
+                    _EXAMPLES_TITLE,
                     examples,
                 ]
             )
@@ -157,6 +178,8 @@ class SemanticContextBuilder:
                 f"Semantic Score : {score}"
             )
 
-        context.append("")
+        context.append(
+            "",
+        )
 
         return context

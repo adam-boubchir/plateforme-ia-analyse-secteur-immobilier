@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
 
@@ -10,20 +12,25 @@ from sqlalchemy import (
     String,
     Text,
 )
-
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
 )
-
-from sqlalchemy.sql import func
+from sqlalchemy.sql import (
+    func,
+)
 
 from .base import Base
+
+__all__ = (
+    "ModelConfigEntity",
+)
 
 
 class ModelConfigEntity(Base):
     """
-    Configuration stored in the database for an AI agent.
+    Database entity representing the configuration of an AI model
+    assigned to an agent.
     """
 
     __tablename__ = "model_config"
@@ -42,6 +49,7 @@ class ModelConfigEntity(Base):
         String(100),
         unique=True,
         nullable=False,
+        index=True,
     )
 
     # ==========================================================
@@ -147,4 +155,5 @@ class ModelConfigEntity(Base):
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
+        onupdate=func.now(),
     )

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -12,14 +14,23 @@ from sqlalchemy.orm import (
     Mapped,
     mapped_column,
 )
-from sqlalchemy.sql import func
+from sqlalchemy.sql import (
+    func,
+)
 
 from .base import Base
+
+__all__ = (
+    "ColumnMetadataEntity",
+)
 
 
 class ColumnMetadataEntity(Base):
     """
-    ORM entity representing metadata of one database column.
+    ORM entity representing the metadata of a database column.
+
+    This entity stores both technical metadata (SQL information)
+    and business metadata used by the semantic context engine.
     """
 
     __tablename__ = "column_metadata"
@@ -35,7 +46,9 @@ class ColumnMetadataEntity(Base):
     )
 
     table_id: Mapped[int] = mapped_column(
-        ForeignKey("table_metadata.id"),
+        ForeignKey(
+            "table_metadata.id",
+        ),
     )
 
     # ==========================================================
@@ -112,7 +125,7 @@ class ColumnMetadataEntity(Base):
     )
 
     # ==========================================================
-    # PROFILING
+    # DATA PROFILING
     # ==========================================================
 
     sample_values: Mapped[str | None] = mapped_column(
@@ -140,14 +153,18 @@ class ColumnMetadataEntity(Base):
         nullable=True,
     )
 
-    is_searchable: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True,
-    )
-
     last_profiled: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
+    )
+
+    # ==========================================================
+    # SEARCH
+    # ==========================================================
+
+    is_searchable: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
     )
 
     # ==========================================================
@@ -163,8 +180,3 @@ class ColumnMetadataEntity(Base):
         DateTime,
         nullable=True,
     )
-
-
-__all__ = [
-    "ColumnMetadataEntity",
-]

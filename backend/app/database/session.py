@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Generator
 
 from sqlalchemy.orm import (
@@ -5,6 +7,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 
+# Import ORM entities so SQLAlchemy registers all mappings.
 import app.database.entities_loader
 
 from app.database.connection_immo_ai import (
@@ -14,63 +17,91 @@ from app.database.connection_ministry import (
     engine_ministry,
 )
 
+__all__ = (
+    "SessionLocalImmoAI",
+    "SessionLocalMinistry",
+    "get_immo_db",
+    "get_ministry_db",
+)
+
 
 # ==========================================================
 # SESSION FACTORIES
 # ==========================================================
 
-SessionLocalImmoAI = sessionmaker(
+SessionLocalImmoAI: sessionmaker = sessionmaker(
     bind=engine_immo_ai,
     autocommit=False,
     autoflush=False,
+    expire_on_commit=False,
 )
 
-SessionLocalMinistry = sessionmaker(
+SessionLocalMinistry: sessionmaker = sessionmaker(
     bind=engine_ministry,
     autocommit=False,
     autoflush=False,
+    expire_on_commit=False,
 )
 
 
 # ==========================================================
-# IMMO AI DATABASE
+# PRIVATE
+# ==========================================================
+
+def _get_session(
+    *,
+    factory: sessionmaker,
+) -> Generator[Session, None, None]:
+    """
+    Create and safely dispose a SQLAlchemy session.
+
+    Args:
+        factory:
+            SQLAlchemy session factory.
+
+    Yields:
+        An active SQLAlchemy session.
+
+    Raises:
+        Any database exception raised during session usage.
+    """
+
+    session = factory()
+
+    try:
+        yield session
+
+    finally:
+        session.close()
+
+
+# ==========================================================
+# PUBLIC
 # ==========================================================
 
 def get_immo_db() -> Generator[Session, None, None]:
     """
-    Provide a SQLAlchemy session for the IMMO AI database.
+    Provide a SQLAlchemy session connected to the
+    IMMO AI database.
+
+    Yields:
+        An active SQLAlchemy session.
     """
 
-    db: Session = SessionLocalImmoAI()
+    yield from _get_session(
+        factory=SessionLocalImmoAI,
+    )
 
-    try:
-        yield db
-
-    finally:
-        db.close()
-
-
-# ==========================================================
-# MINISTRY DATABASE
-# ==========================================================
 
 def get_ministry_db() -> Generator[Session, None, None]:
     """
-    Provide a SQLAlchemy session for the Ministry database.
+    Provide a SQLAlchemy session connected to the
+    Ministry SQL Server database.
+
+    Yields:
+        An active SQLAlchemy session.
     """
 
-    db: Session = SessionLocalMinistry()
-
-    try:
-        yield db
-
-    finally:
-        db.close()
-
-
-__all__ = [
-    "SessionLocalImmoAI",
-    "SessionLocalMinistry",
-    "get_immo_db",
-    "get_ministry_db",
-]
+    yield from _get_session(
+        factory=SessionLocalMinistry,
+    )

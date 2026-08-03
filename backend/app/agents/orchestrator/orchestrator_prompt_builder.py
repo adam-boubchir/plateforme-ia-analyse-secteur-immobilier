@@ -4,23 +4,24 @@ from app.agents.orchestrator.orchestrator_prompt import (
     ORCHESTRATOR_SYSTEM_PROMPT,
 )
 
-__all__ = ["OrchestratorPromptBuilder"]
+__all__ = ("OrchestratorPromptBuilder",)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-USER_REQUEST_TITLE = "USER REQUEST"
+_USER_REQUEST_TITLE = "USER REQUEST"
 
 
 class OrchestratorPromptBuilder:
     """
     Build the prompt sent to the Orchestrator LLM.
 
-    Responsibilities:
-        - Inject the system prompt.
-        - Inject the user request.
-        - Return the complete prompt.
+    Responsibilities
+    ----------------
+    - Inject the system prompt.
+    - Inject the user request.
+    - Return the complete prompt.
     """
 
     # ==========================================================
@@ -29,6 +30,7 @@ class OrchestratorPromptBuilder:
 
     def build_prompt(
         self,
+        *,
         question: str,
     ) -> str:
         """
@@ -45,8 +47,8 @@ class OrchestratorPromptBuilder:
             (
                 ORCHESTRATOR_SYSTEM_PROMPT,
                 self._section(
-                    USER_REQUEST_TITLE,
-                    question,
+                    title=_USER_REQUEST_TITLE,
+                    body=question,
                 ),
             )
         ).strip()
@@ -55,8 +57,9 @@ class OrchestratorPromptBuilder:
     # PRIVATE
     # ==========================================================
 
+    @staticmethod
     def _section(
-        self,
+        *,
         title: str,
         body: str,
     ) -> str:

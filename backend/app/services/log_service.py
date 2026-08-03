@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.database.entities.conversation_log import (
     ConversationLog,
 )
@@ -6,6 +8,10 @@ from app.database.repositories.conversation_log_repository import (
 )
 from app.logging.execution_context import (
     ExecutionContext,
+)
+
+__all__ = (
+    "LogService",
 )
 
 
@@ -19,10 +25,10 @@ class LogService:
 
     def __init__(
         self,
+        *,
         repository: ConversationLogRepository,
     ) -> None:
-
-        self.repository: ConversationLogRepository = repository
+        self._repository = repository
 
     # ==========================================================
     # CREATE
@@ -30,11 +36,22 @@ class LogService:
 
     def create_log(
         self,
+        *,
         conversation_id: int,
         question: str,
     ) -> ConversationLog:
         """
         Create an empty execution log.
+
+        Args:
+            conversation_id:
+                Conversation identifier.
+
+            question:
+                User question.
+
+        Returns:
+            Newly created log.
         """
 
         log = ConversationLog(
@@ -43,9 +60,11 @@ class LogService:
             status=self.RUNNING_STATUS,
         )
 
-        return self.repository.create(
+        created_log = self._repository.create(
             log=log,
         )
+
+        return created_log
 
     # ==========================================================
     # SAVE EXECUTION
@@ -53,15 +72,23 @@ class LogService:
 
     def save_execution(
         self,
+        *,
         context: ExecutionContext,
     ) -> ConversationLog:
         """
-        Persist the complete execution context.
+        Persist a complete execution context.
+
+        Args:
+            context:
+                Execution context.
+
+        Returns:
+            Persisted execution log.
         """
 
         if context.conversation_id is None:
             raise ValueError(
-                "conversation_id cannot be None."
+                "conversation_id cannot be None.",
             )
 
         log = ConversationLog(
@@ -96,9 +123,11 @@ class LogService:
             ),
         )
 
-        return self.repository.create(
+        created_log = self._repository.create(
             log=log,
         )
+
+        return created_log
 
     # ==========================================================
     # UPDATE
@@ -106,11 +135,22 @@ class LogService:
 
     def update_log(
         self,
+        *,
         log: ConversationLog,
         **fields,
     ) -> ConversationLog:
         """
         Update one execution log.
+
+        Args:
+            log:
+                Execution log.
+
+            **fields:
+                Fields to update.
+
+        Returns:
+            Updated log.
         """
 
         for key, value in fields.items():
@@ -120,9 +160,11 @@ class LogService:
                 value,
             )
 
-        return self.repository.update(
+        updated_log = self._repository.update(
             log=log,
         )
+
+        return updated_log
 
     # ==========================================================
     # READ
@@ -130,51 +172,63 @@ class LogService:
 
     def get_log(
         self,
+        *,
         log_id: int,
     ) -> ConversationLog | None:
         """
         Retrieve one execution log.
         """
 
-        return self.repository.get_by_id(
+        log = self._repository.get_by_id(
             log_id=log_id,
         )
 
+        return log
+
     def get_logs_by_conversation(
         self,
+        *,
         conversation_id: int,
     ) -> list[ConversationLog]:
         """
         Retrieve every execution of one conversation.
         """
 
-        return self.repository.get_by_conversation(
+        logs = self._repository.get_by_conversation(
             conversation_id=conversation_id,
         )
 
+        return logs
+
     def get_last_log(
         self,
+        *,
         conversation_id: int,
     ) -> ConversationLog | None:
         """
         Retrieve the latest execution of one conversation.
         """
 
-        return self.repository.get_last_by_conversation(
+        log = self._repository.get_last_by_conversation(
             conversation_id=conversation_id,
         )
 
+        return log
+
     def count_logs(
         self,
+        *,
         conversation_id: int,
     ) -> int:
         """
         Count executions of one conversation.
         """
 
-        return self.repository.count_by_conversation(
+        count = self._repository.count_by_conversation(
             conversation_id=conversation_id,
         )
+
+        return count
 
     def get_all_logs(
         self,
@@ -183,7 +237,9 @@ class LogService:
         Retrieve every execution log.
         """
 
-        return self.repository.get_all()
+        logs = self._repository.get_all()
+
+        return logs
 
     # ==========================================================
     # DELETE
@@ -191,17 +247,17 @@ class LogService:
 
     def delete_log(
         self,
+        *,
         log: ConversationLog,
     ) -> None:
         """
         Delete one execution log.
+
+        Args:
+            log:
+                Execution log to delete.
         """
 
-        self.repository.delete(
-            log=log,
+        self._repository.delete(
+            entity=log,
         )
-
-
-__all__ = [
-    "LogService",
-]

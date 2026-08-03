@@ -15,12 +15,16 @@ from app.knowledge.database_knowledge import (
     DATABASE_KNOWLEDGE,
 )
 
-__all__ = ["KnowledgeSelector"]
+__all__ = ("KnowledgeSelector",)
 
-MIN_YEAR = 1990
-MAX_YEAR = 2035
+# ==========================================================
+# CONSTANTS
+# ==========================================================
 
-DEFAULT_SELECTION: dict[str, Any] = {
+_MIN_YEAR = 1990
+_MAX_YEAR = 2035
+
+_DEFAULT_SELECTION: dict[str, Any] = {
     "tables": set(),
     "business_domains": set(),
     "question_types": set(),
@@ -34,7 +38,7 @@ DEFAULT_SELECTION: dict[str, Any] = {
 
 class KnowledgeSelector:
     """
-    Select the business knowledge required to answer a user question.
+    Select the knowledge required to answer a user question.
 
     Responsibilities
     ----------------
@@ -42,18 +46,19 @@ class KnowledgeSelector:
     - Evaluate business rules.
     - Score activated rules.
     - Enrich the selection.
-    - Produce the knowledge context.
+    - Produce the final knowledge selection.
     """
 
     def __init__(
         self,
+        *,
         entity_detector: EntityDetector,
         rule_engine: RuleEngine,
         rule_scorer: RuleScorer,
     ) -> None:
-        self.entity_detector = entity_detector
-        self.rule_engine = rule_engine
-        self.rule_scorer = rule_scorer
+        self._entity_detector = entity_detector
+        self._rule_engine = rule_engine
+        self._rule_scorer = rule_scorer
 
     # ==========================================================
     # PUBLIC
@@ -61,88 +66,116 @@ class KnowledgeSelector:
 
     def select(
         self,
+        *,
         question: str,
     ) -> dict[str, Any]:
+        """
+        Build the knowledge selection for a user question.
+        """
 
         entities = self._detect_entities(
-            question,
+            question=question,
         )
 
         scored_rules = self._score_rules(
-            question,
+            question=question,
         )
 
         selection = self._create_selection()
 
         self._apply_rules(
-            selection,
-            scored_rules,
+            selection=selection,
+            scored_rules=scored_rules,
         )
 
         self._apply_entity_enrichment(
-            selection,
-            entities,
+            selection=selection,
+            entities=entities,
         )
 
         self._apply_time_enrichment(
-            selection,
-            question,
+            selection=selection,
+            question=question,
         )
 
         self._apply_default_tables(
-            selection,
+            selection=selection,
         )
 
-        return self._build_result(
-            selection,
-            entities,
+        result = self._build_result(
+            selection=selection,
+            entities=entities,
         )
+
+        return result
 
     # ==========================================================
     # PRIVATE
     # ==========================================================
 
-    def _create_selection(
-        self,
-    ) -> dict[str, Any]:
+    @staticmethod
+    def _create_selection() -> dict[str, Any]:
+        """
+        Create a mutable selection from the default template.
+        """
 
-        return {
+        selection = {
             key: value.copy() if isinstance(value, set) else value
-            for key, value in DEFAULT_SELECTION.items()
+            for key, value in _DEFAULT_SELECTION.items()
         }
+
+        return selection
 
     def _detect_entities(
         self,
+        *,
         question: str,
     ) -> dict[str, Any]:
+        """
+        Detect entities contained in the user question.
+        """
 
-        return self.entity_detector.detect(
-            question,
+        entities = self._entity_detector.detect(
+            question=question,
         )
+
+        return entities
 
     def _score_rules(
         self,
+        *,
         question: str,
-    ) -> list[tuple[Any, float]]:
+    ) -> list[tuple[Any, int]]:
+        """
+        Evaluate and score matching business rules.
+        """
 
-        activated_rules = self.rule_engine.evaluate(
-            question,
+        activated_rules = self._rule_engine.evaluate(
+            question=question,
         )
 
-        return self.rule_scorer.score(
-            question,
-            activated_rules,
+        scored_rules = self._rule_scorer.score(
+            question=question,
+            rules=activated_rules,
         )
 
+        return scored_rules
+
+    @staticmethod
     def _apply_rules(
-        self,
+        *,
         selection: dict[str, Any],
-        scored_rules: list[tuple[Any, float]],
+        scored_rules: list[tuple[Any, int]],
     ) -> None:
+        """
+        Apply activated rules to the current selection.
+        """
 
         for rule, _ in scored_rules:
 
-            selection["tables"].update(rule.tables)
+            selection["tables"].update(
+                rule.tables,
+            )
 
             if rule.business_domain:
                 selection["business_domains"].add(
@@ -164,13 +197,19 @@ class KnowledgeSelector:
             selection["geographic"] |= rule.geographic
             selection["time_series"] |= rule.time_series
 
+    @staticmethod
     def _apply_entity_enrichment(
-        self,
+        *,
         selection: dict[str, Any],
         entities: dict[str, Any],
     ) -> None:
+        """
+        Enrich the selection using detected entities.
+        """
 
-        if entities.get("regions"):
+        if entities.get(
+            "regions",
+        ):
 
             selection["tables"].update(
                 {
@@ -181,25 +220,33 @@ class KnowledgeSelector:
 
             selection["geographic"] = True
 
+    @staticmethod
     def _apply_time_enrichment(
-        self,
+        *,
         selection: dict[str, Any],
         question: str,
     ) -> None:
+        """
+        Detect explicit years in the question.
+        """
 
         if any(
             str(year) in question
             for year in range(
-                MIN_YEAR,
-                MAX_YEAR + 1,
+                _MIN_YEAR,
+                _MAX_YEAR + 1,
             )
         ):
             selection["time_series"] = True
 
+    @staticmethod
     def _apply_default_tables(
-        self,
+        *,
         selection: dict[str, Any],
     ) -> None:
+        """
+        Select every table if no rule matched.
+        """
 
         if not selection["tables"]:
 
@@ -207,20 +254,34 @@ class KnowledgeSelector:
                 DATABASE_KNOWLEDGE.keys(),
             )
 
+    @staticmethod
     def _build_result(
-        self,
+        *,
         selection: dict[str, Any],
         entities: dict[str, Any],
     ) -> dict[str, Any]:
+        """
+        Build the final immutable selection payload.
+        """
 
-        return {
+        result = {
             "entities": entities,
-            "tables": sorted(selection["tables"]),
-            "business_domains": sorted(selection["business_domains"]),
-            "question_types": sorted(selection["question_types"]),
-            "sql_patterns": sorted(selection["sql_patterns"]),
+            "tables": sorted(
+                selection["tables"],
+            ),
+            "business_domains": sorted(
+                selection["business_domains"],
+            ),
+            "question_types": sorted(
+                selection["question_types"],
+            ),
+            "sql_patterns": sorted(
+                selection["sql_patterns"],
+            ),
             "needs_join": selection["needs_join"],
             "aggregation": selection["aggregation"],
             "geographic": selection["geographic"],
             "time_series": selection["time_series"],
         }
+
+        return result

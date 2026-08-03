@@ -1,16 +1,41 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+
+__all__ = (
+    "ModelConfig",
+    "LLMMetadata",
+    "LLMResponse",
+    "AgentMetadata",
+    "AgentResponse",
+    "AgentExecutionResult",
+)
+
+
+class BaseAgentModel(BaseModel):
+    """
+    Base class shared by every domain model.
+    """
+
+    model_config = ConfigDict(
+        frozen=False,
+        extra="ignore",
+    )
 
 
 # ==========================================================
 # MODEL CONFIGURATION
 # ==========================================================
 
-class ModelConfig(BaseModel):
+
+class ModelConfig(BaseAgentModel):
     """
-    Configuration of an AI model.
+    AI model configuration.
     """
 
     agent_name: str
@@ -46,9 +71,10 @@ class ModelConfig(BaseModel):
 # LLM METADATA
 # ==========================================================
 
-class LLMMetadata(BaseModel):
+
+class LLMMetadata(BaseAgentModel):
     """
-    Metadata returned by the LLM provider.
+    Metadata returned by a language model.
     """
 
     provider: str
@@ -70,9 +96,10 @@ class LLMMetadata(BaseModel):
 # LLM RESPONSE
 # ==========================================================
 
-class LLMResponse(BaseModel):
+
+class LLMResponse(BaseAgentModel):
     """
-    Generic response returned by an LLM provider.
+    Generic response returned by a provider.
     """
 
     content: str
@@ -84,15 +111,16 @@ class LLMResponse(BaseModel):
 # AGENT METADATA
 # ==========================================================
 
-class AgentMetadata(BaseModel):
+
+class AgentMetadata(BaseAgentModel):
     """
-    Metadata common to every AI agent.
+    Execution metadata shared by every AI agent.
     """
 
     agent_name: str
 
     started_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=datetime.utcnow,
     )
 
     finished_at: datetime | None = None
@@ -108,7 +136,8 @@ class AgentMetadata(BaseModel):
 # AGENT RESPONSE
 # ==========================================================
 
-class AgentResponse(BaseModel):
+
+class AgentResponse(BaseAgentModel):
     """
     Standard response returned by every AI agent.
     """
@@ -130,7 +159,8 @@ class AgentResponse(BaseModel):
 # AGENT EXECUTION RESULT
 # ==========================================================
 
-class AgentExecutionResult(BaseModel):
+
+class AgentExecutionResult(BaseAgentModel):
     """
     Internal execution result.
     """

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-__all__ = ["BusinessRulesBuilder"]
+__all__ = ("BusinessRulesBuilder",)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-SECTION_TITLE = "BUSINESS RULES"
+_SECTION_TITLE = "BUSINESS RULES"
 
-SECTION_SEPARATOR = "=" * 100
+_SECTION_SEPARATOR = "=" * 100
 
-BUSINESS_RULES: tuple[str, ...] = (
+_BUSINESS_RULES: tuple[str, ...] = (
     "The database contains Moroccan real estate data.",
     "All monetary values are expressed in Moroccan Dirham (MAD).",
     "Always use JOINs based on foreign keys.",
@@ -54,14 +54,17 @@ class BusinessRulesBuilder:
     ) -> list[str]:
         """
         Build the business rules section.
+
+        Returns:
+            List of formatted business rules.
         """
 
         return [
-            SECTION_TITLE,
+            _SECTION_TITLE,
             "",
             *self._build_rules(),
             "",
-            SECTION_SEPARATOR,
+            _SECTION_SEPARATOR,
             "",
         ]
 
@@ -69,17 +72,19 @@ class BusinessRulesBuilder:
     # PRIVATE
     # ==========================================================
 
-    def _build_rules(
-        self,
-    ) -> list[str]:
+    @staticmethod
+    def _build_rules() -> list[str]:
         """
         Format all business rules.
+
+        Returns:
+            Numbered list of business rules.
         """
 
         return [
             f"{index}. {rule}"
             for index, rule in enumerate(
-                BUSINESS_RULES,
+                _BUSINESS_RULES,
                 start=1,
             )
         ]

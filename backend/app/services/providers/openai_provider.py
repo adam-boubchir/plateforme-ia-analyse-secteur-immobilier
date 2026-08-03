@@ -1,9 +1,9 @@
+from __future__ import annotations
+
 import os
 
-from openai import (
-    OpenAI,
-    OpenAIError,
-)
+from openai import OpenAI
+from openai import OpenAIError
 
 from app.models.agent_models import (
     ModelConfig,
@@ -12,12 +12,14 @@ from app.services.providers.base_provider import (
     BaseProvider,
 )
 
+__all__ = (
+    "OpenAIProvider",
+)
+
 
 class OpenAIProvider(BaseProvider):
     """
-    OpenAI provider.
-
-    Responsible for communicating with the OpenAI API.
+    OpenAI provider implementation.
     """
 
     # ==========================================================
@@ -26,30 +28,50 @@ class OpenAIProvider(BaseProvider):
 
     def generate(
         self,
+        *,
         config: ModelConfig,
         prompt: str,
     ) -> str:
         """
         Generate a response using OpenAI.
+
+        Args:
+            config:
+                Model configuration.
+
+            prompt:
+                Prompt sent to the language model.
+
+        Returns:
+            Generated response.
+
+        Raises:
+            RuntimeError:
+                If the OpenAI API returns an error.
         """
 
-        client: OpenAI = self._create_client(
+        self.validate_config(
             config=config,
+        )
+
+        self.before_generate(
+            config=config,
+            prompt=prompt,
+        )
+
+        client = self._create_client(
+            config=config,
+        )
+
+        messages = self._build_messages(
+            config=config,
+            prompt=prompt,
         )
 
         try:
             response = client.chat.completions.create(
                 model=config.model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": config.system_prompt or "",
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
+                messages=messages,
                 temperature=config.temperature,
                 top_p=config.top_p,
                 frequency_penalty=config.frequency_penalty,
@@ -59,14 +81,59 @@ class OpenAIProvider(BaseProvider):
 
         except OpenAIError as ex:
             raise RuntimeError(
-                f"OpenAI error: {ex}"
+                f"OpenAI error: {ex}",
             ) from ex
 
-        content: str | None = (
+        content = (
             response.choices[0].message.content
+            or ""
         )
 
-        return content.strip() if content else ""
+        generated_response = self.after_generate(
+            response=content,
+        )
+
+        return generated_response
+
+    # ==========================================================
+    # OVERRIDES
+    # ==========================================================
+
+    def validate_config(
+        self,
+        *,
+        config: ModelConfig,
+    ) -> None:
+        """
+        Validate the OpenAI configuration.
+
+        Args:
+            config:
+                Model configuration.
+
+        Raises:
+            ValueError:
+                If the configuration is incomplete.
+        """
+
+        if not config.model_name:
+            raise ValueError(
+                "OpenAI model name is missing.",
+            )
+
+        if not config.api_key_alias:
+            raise ValueError(
+                "API key alias is missing.",
+            )
+
+        api_key = os.getenv(
+            config.api_key_alias,
+        )
+
+        if not api_key:
+            raise ValueError(
+                f"Environment variable '{config.api_key_alias}' was not found.",
+            )
 
     # ==========================================================
     # PRIVATE
@@ -74,28 +141,61 @@ class OpenAIProvider(BaseProvider):
 
     def _create_client(
         self,
+        *,
         config: ModelConfig,
     ) -> OpenAI:
         """
         Create an OpenAI client.
+
+        Args:
+            config:
+                Model configuration.
+
+        Returns:
+            Configured OpenAI client.
         """
 
-        api_key: str | None = os.getenv(
+        api_key = os.getenv(
             config.api_key_alias,
         )
 
-        if api_key is None:
-            raise ValueError(
-                f"Environment variable '{config.api_key_alias}' was not found."
-            )
-
-        return OpenAI(
+        client = OpenAI(
             api_key=api_key,
             base_url=config.api_base_url or None,
             timeout=config.timeout_seconds,
         )
 
+        return client
 
-__all__ = [
-    "OpenAIProvider",
-]
+    @staticmethod
+    def _build_messages(
+        *,
+        config: ModelConfig,
+        prompt: str,
+    ) -> list[dict[str, str]]:
+        """
+        Build the chat messages.
+
+        Args:
+            config:
+                Model configuration.
+
+            prompt:
+                User prompt.
+
+        Returns:
+            Chat messages formatted for OpenAI.
+        """
+
+        messages = [
+            {
+                "role": "system",
+                "content": config.system_prompt or "",
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ]
+
+        return messages

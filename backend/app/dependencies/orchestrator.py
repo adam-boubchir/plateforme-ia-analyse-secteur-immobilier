@@ -1,16 +1,19 @@
-from sqlalchemy.orm import Session
+from __future__ import annotations
 
-from app.agents.chat_agent.chat_agent import (
-    ChatAgent,
+from typing import Annotated
+
+from fastapi import (
+    Depends,
 )
+from sqlalchemy.orm import (
+    Session,
+)
+
 from app.agents.orchestrator.agent_registry import (
     AgentRegistry,
 )
 from app.agents.orchestrator.orchestrator_agent import (
     OrchestratorAgent,
-)
-from app.agents.orchestrator.orchestrator_generator import (
-    OrchestratorGenerator,
 )
 from app.agents.orchestrator.orchestrator_prompt_builder import (
     OrchestratorPromptBuilder,
@@ -18,11 +21,12 @@ from app.agents.orchestrator.orchestrator_prompt_builder import (
 from app.agents.orchestrator.orchestrator_service import (
     OrchestratorService,
 )
-from app.agents.sql_agent.sql_agent import (
-    SQLAgent,
-)
 from app.dependencies.chat_agent import (
     get_chat_agent,
+)
+from app.dependencies.database import (
+    get_immo_db,
+    get_ministry_db,
 )
 from app.dependencies.llm import (
     get_orchestrator_generator,
@@ -31,92 +35,146 @@ from app.dependencies.sql_agent import (
     get_sql_agent,
 )
 
+from app.dependencies.report_agent import (
+    get_report_agent,
+)
+
+__all__ = (
+    "get_orchestrator_agent",
+    "get_agent_registry",
+    "get_orchestrator_service",
+)
+
+# ==========================================================
+# TYPE ALIASES
+# ==========================================================
+
+ImmoDatabase = Annotated[
+    Session,
+    Depends(get_immo_db),
+]
+
+MinistryDatabase = Annotated[
+    Session,
+    Depends(get_ministry_db),
+]
 
 # ==========================================================
 # ORCHESTRATOR AGENT
 # ==========================================================
 
+
 def get_orchestrator_agent(
-    db: Session,
+    *,
+    db: ImmoDatabase,
 ) -> OrchestratorAgent:
     """
-    Build the OrchestratorAgent dependency.
+    Build and return the OrchestratorAgent.
+
+    Args:
+        db:
+            Application database session.
+
+    Returns:
+        Configured OrchestratorAgent instance.
     """
 
     prompt_builder = OrchestratorPromptBuilder()
 
-    generator: OrchestratorGenerator = (
-        get_orchestrator_generator(
-            db=db,
-        )
+    generator = get_orchestrator_generator(
+        db=db,
     )
 
-    return OrchestratorAgent(
+    orchestrator_agent = OrchestratorAgent(
         prompt_builder=prompt_builder,
         generator=generator,
     )
+
+    return orchestrator_agent
 
 
 # ==========================================================
 # AGENT REGISTRY
 # ==========================================================
 
+
 def get_agent_registry(
-    immo_db: Session,
-    ministry_db: Session,
+    *,
+    immo_db: ImmoDatabase,
+    ministry_db: MinistryDatabase,
 ) -> AgentRegistry:
     """
-    Build the AgentRegistry dependency.
+    Build and return the AgentRegistry.
+
+    Args:
+        immo_db:
+            Application database session.
+
+        ministry_db:
+            Ministry database session.
+
+    Returns:
+        Configured AgentRegistry instance.
     """
 
-    sql_agent: SQLAgent = get_sql_agent(
+    sql_agent = get_sql_agent(
         immo_db=immo_db,
         ministry_db=ministry_db,
     )
 
-    chat_agent: ChatAgent = get_chat_agent(
+    chat_agent = get_chat_agent(
         db=immo_db,
     )
 
-    return AgentRegistry(
+    report_agent = get_report_agent(
+        db=immo_db,
+        sql_agent=sql_agent,
+    )
+
+    agent_registry = AgentRegistry(
         sql_agent=sql_agent,
         chat_agent=chat_agent,
+        report_agent=report_agent,
     )
+    return agent_registry
 
 
 # ==========================================================
 # ORCHESTRATOR SERVICE
 # ==========================================================
 
+
 def get_orchestrator_service(
-    immo_db: Session,
-    ministry_db: Session,
+    *,
+    immo_db: ImmoDatabase,
+    ministry_db: MinistryDatabase,
 ) -> OrchestratorService:
     """
-    Build the OrchestratorService dependency.
+    Build and return the OrchestratorService.
+
+    Args:
+        immo_db:
+            Application database session.
+
+        ministry_db:
+            Ministry database session.
+
+    Returns:
+        Configured OrchestratorService instance.
     """
 
-    orchestrator_agent: OrchestratorAgent = (
-        get_orchestrator_agent(
-            db=immo_db,
-        )
+    orchestrator_agent = get_orchestrator_agent(
+        db=immo_db,
     )
 
-    agent_registry: AgentRegistry = (
-        get_agent_registry(
-            immo_db=immo_db,
-            ministry_db=ministry_db,
-        )
+    agent_registry = get_agent_registry(
+        immo_db=immo_db,
+        ministry_db=ministry_db,
     )
 
-    return OrchestratorService(
+    orchestrator_service = OrchestratorService(
         orchestrator_agent=orchestrator_agent,
         agent_registry=agent_registry,
     )
 
-
-__all__ = [
-    "get_orchestrator_agent",
-    "get_agent_registry",
-    "get_orchestrator_service",
-]
+    return orchestrator_service

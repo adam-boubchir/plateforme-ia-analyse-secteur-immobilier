@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 from datetime import datetime
 
 from app.logging.execution_context import (
     ExecutionContext,
 )
-
 from app.services.log_service import (
     LogService,
+)
+
+__all__ = (
+    "ExecutionLogger",
 )
 
 
@@ -15,18 +20,18 @@ class ExecutionLogger:
 
     Responsibilities
     ----------------
-    • Create an execution context
-    • Measure execution time
-    • Mark execution status
-    • Persist execution logs
+    - Create an execution context.
+    - Measure execution duration.
+    - Record execution status.
+    - Persist execution logs.
     """
 
     def __init__(
         self,
+        *,
         log_service: LogService,
     ) -> None:
-
-        self.log_service = log_service
+        self._log_service = log_service
 
     # ==========================================================
     # START
@@ -34,23 +39,30 @@ class ExecutionLogger:
 
     def start(
         self,
+        *,
         question: str,
         conversation_id: int | None = None,
     ) -> ExecutionContext:
         """
         Create a new execution context.
+
+        Args:
+            question:
+                User question.
+
+            conversation_id:
+                Conversation identifier.
+
+        Returns:
+            Newly created execution context.
         """
 
         context = ExecutionContext(
-
             conversation_id=conversation_id,
-
             question=question,
-
         )
 
         context.started_at = datetime.utcnow()
-
         context.status = "RUNNING"
 
         return context
@@ -61,17 +73,26 @@ class ExecutionLogger:
 
     def finish(
         self,
+        *,
         context: ExecutionContext,
     ) -> None:
         """
         Finalize a successful execution.
+
+        Args:
+            context:
+                Execution context.
         """
 
-        self._finalize(context)
+        self._finalize(
+            context=context,
+        )
 
         context.status = "SUCCESS"
 
-        self.save(context)
+        self.save(
+            context=context,
+        )
 
     # ==========================================================
     # FAILURE
@@ -79,20 +100,33 @@ class ExecutionLogger:
 
     def fail(
         self,
+        *,
         context: ExecutionContext,
         error: Exception | str,
     ) -> None:
         """
         Finalize a failed execution.
+
+        Args:
+            context:
+                Execution context.
+
+            error:
+                Raised exception or error message.
         """
 
-        self._finalize(context)
+        self._finalize(
+            context=context,
+        )
 
         context.status = "FAILED"
+        context.error = str(
+            error,
+        )
 
-        context.error = str(error)
-
-        self.save(context)
+        self.save(
+            context=context,
+        )
 
     # ==========================================================
     # SAVE
@@ -100,20 +134,24 @@ class ExecutionLogger:
 
     def save(
         self,
+        *,
         context: ExecutionContext,
     ) -> None:
         """
-        Persist the execution.
+        Persist an execution log.
+
+        Args:
+            context:
+                Execution context.
         """
 
         if context.conversation_id is None:
-
             raise ValueError(
-                "ExecutionContext.conversation_id cannot be None."
+                "ExecutionContext.conversation_id cannot be None.",
             )
 
-        self.log_service.save_execution(
-            context
+        self._log_service.save_execution(
+            context=context,
         )
 
     # ==========================================================
@@ -122,10 +160,15 @@ class ExecutionLogger:
 
     @staticmethod
     def _finalize(
+        *,
         context: ExecutionContext,
     ) -> None:
         """
         Compute execution duration.
+
+        Args:
+            context:
+                Execution context.
         """
 
         context.finished_at = datetime.utcnow()
@@ -133,11 +176,12 @@ class ExecutionLogger:
         if context.started_at is None:
             return
 
-        context.execution_time = (
+        execution_time = (
             context.finished_at
             - context.started_at
         ).total_seconds()
 
+        context.execution_time = execution_time
         context.execution_time_ms = int(
-            context.execution_time * 1000
+            execution_time * 1000,
         )

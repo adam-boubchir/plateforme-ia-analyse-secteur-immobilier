@@ -4,17 +4,17 @@ from typing import Any
 
 from app.services.metadata_service import MetadataService
 
-__all__ = ["RelationshipContextBuilder"]
+__all__ = ("RelationshipContextBuilder",)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-SECTION_SEPARATOR = "=" * 100
+_SECTION_SEPARATOR = "=" * 100
 
-SECTION_TITLE = "DATABASE RELATIONSHIPS"
+_SECTION_TITLE = "DATABASE RELATIONSHIPS"
 
-EMPTY_RELATIONSHIPS_MESSAGE = "No relationships found."
+_EMPTY_RELATIONSHIPS_MESSAGE = "No relationships found."
 
 
 class RelationshipContextBuilder:
@@ -27,9 +27,10 @@ class RelationshipContextBuilder:
 
     def __init__(
         self,
+        *,
         metadata_service: MetadataService,
     ) -> None:
-        self.metadata_service = metadata_service
+        self._metadata_service = metadata_service
 
     # ==========================================================
     # PUBLIC
@@ -37,18 +38,25 @@ class RelationshipContextBuilder:
 
     def build(
         self,
+        *,
         selected_tables: list[str],
     ) -> list[str]:
         """
         Build the relationships section.
+
+        Args:
+            selected_tables: Tables selected by the Knowledge Selector.
+
+        Returns:
+            Formatted relationship section.
         """
 
         relationships = self._get_selected_relationships(
-            selected_tables,
+            selected_tables=selected_tables,
         )
 
         context = [
-            SECTION_TITLE,
+            _SECTION_TITLE,
             "",
         ]
 
@@ -57,7 +65,7 @@ class RelationshipContextBuilder:
             for relationship in relationships:
                 context.extend(
                     self._build_relationship(
-                        relationship,
+                        relationship=relationship,
                     )
                 )
 
@@ -68,10 +76,10 @@ class RelationshipContextBuilder:
             )
 
         context.extend(
-            [
-                SECTION_SEPARATOR,
+            (
+                _SECTION_SEPARATOR,
                 "",
-            ]
+            )
         )
 
         return context
@@ -82,6 +90,7 @@ class RelationshipContextBuilder:
 
     def _get_selected_relationships(
         self,
+        *,
         selected_tables: list[str],
     ) -> list[Any]:
         """
@@ -91,27 +100,27 @@ class RelationshipContextBuilder:
 
         return [
             relationship
-            for relationship in self.metadata_service.get_relationships()
+            for relationship in self._metadata_service.get_relationships()
             if (
                 relationship.source_table in selected_tables
                 and relationship.target_table in selected_tables
             )
         ]
 
-    def _empty_relationships(
-        self,
-    ) -> list[str]:
+    @staticmethod
+    def _empty_relationships() -> list[str]:
         """
         Build the empty relationships section.
         """
 
         return [
-            EMPTY_RELATIONSHIPS_MESSAGE,
+            _EMPTY_RELATIONSHIPS_MESSAGE,
             "",
         ]
 
+    @staticmethod
     def _build_relationship(
-        self,
+        *,
         relationship: Any,
     ) -> list[str]:
         """
@@ -127,7 +136,6 @@ class RelationshipContextBuilder:
         )
 
         if constraint:
-
             context.append(
                 f"Constraint : {constraint}"
             )

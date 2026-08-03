@@ -1,5 +1,30 @@
-from sqlalchemy.orm import Session
+from __future__ import annotations
 
+from sqlalchemy.orm import (
+    Session,
+)
+
+from app.agents.sql_agent.context_engine.selectors.knowledge_selector import (
+    KnowledgeSelector,
+)
+from app.agents.sql_agent.context_engine.selectors.rule_engine import (
+    RuleEngine,
+)
+from app.agents.sql_agent.context_engine.selectors.rules import (
+    RULES,
+)
+from app.agents.sql_agent.context_engine.selectors.scoring import (
+    RuleScorer,
+)
+from app.agents.sql_agent.entity_detector import (
+    EntityDetector,
+)
+from app.agents.sql_agent.few_shot_provider import (
+    FewShotProvider,
+)
+from app.agents.sql_agent.few_shots.examples import (
+    FEW_SHOT_EXAMPLES,
+)
 from app.agents.sql_agent.prompts import (
     PromptBuilder,
 )
@@ -31,65 +56,73 @@ from app.logging.execution_logger import (
     ExecutionLogger,
 )
 
-from app.agents.sql_agent.few_shots.examples import (
-    FEW_SHOT_EXAMPLES,
+__all__ = (
+    "get_sql_agent",
 )
 
-from app.agents.sql_agent.context_engine.selectors.knowledge_selector import (
-    KnowledgeSelector,
-)
 
-from app.agents.sql_agent.context_engine.selectors.rule_engine import (
-    RuleEngine,
-)
+# ==========================================================
+# SQL AGENT
+# ==========================================================
 
-from app.agents.sql_agent.context_engine.selectors.scoring import (
-    RuleScorer,
-)
-
-from app.agents.sql_agent.context_engine.selectors.rules import (
-    RULES,
-)
-
-from app.agents.sql_agent.entity_detector import (
-    EntityDetector,
-)
-
-from app.agents.sql_agent.few_shot_provider import (
-    FewShotProvider,
-)
 
 def get_sql_agent(
+    *,
     immo_db: Session,
     ministry_db: Session,
 ) -> SQLAgent:
     """
-    Dependency responsible for building the SQL Agent.
+    Build and return a fully configured SQLAgent.
 
-    Pipeline
-    --------
-    Context Builder
+    Pipeline:
+        Context Builder
             ↓
-    Prompt Builder
+        Knowledge Selector
             ↓
-    SQL Generator
+        Few-Shot Provider
             ↓
-    SQL Validator
+        Prompt Builder
             ↓
-    SQL Executor
+        SQL Generator
             ↓
-    Response Formatter
+        SQL Validator
             ↓
-    Execution Logger
+        SQL Executor
+            ↓
+        Response Formatter
+            ↓
+        Execution Logger
+
+    Args:
+        immo_db:
+            Application database session.
+
+        ministry_db:
+            Ministry SQL Server session.
+
+    Returns:
+        Fully configured SQLAgent instance.
     """
+
+    # ==========================================================
+    # CONTEXT
+    # ==========================================================
 
     context_builder = get_sql_context_builder(
         db=immo_db,
     )
 
+    # ==========================================================
+    # FEW SHOTS
+    # ==========================================================
+
     few_shot_provider = FewShotProvider(
         examples=FEW_SHOT_EXAMPLES,
     )
+
+    # ==========================================================
+    # KNOWLEDGE SELECTION
+    # ==========================================================
 
     entity_detector = EntityDetector()
 
@@ -99,15 +132,23 @@ def get_sql_agent(
 
     rule_scorer = RuleScorer()
 
-    selector = KnowledgeSelector(
+    knowledge_selector = KnowledgeSelector(
         entity_detector=entity_detector,
         rule_engine=rule_engine,
         rule_scorer=rule_scorer,
     )
 
+    # ==========================================================
+    # PROMPT
+    # ==========================================================
+
     prompt_builder = PromptBuilder(
         few_shot_provider=few_shot_provider,
     )
+
+    # ==========================================================
+    # GENERATION
+    # ==========================================================
 
     generator: SQLGenerator = get_sql_generator(
         db=immo_db,
@@ -115,11 +156,19 @@ def get_sql_agent(
 
     validator = SQLValidator()
 
+    # ==========================================================
+    # EXECUTION
+    # ==========================================================
+
     executor = SQLExecutor(
         db=ministry_db,
     )
 
     formatter = SQLResponseFormatter()
+
+    # ==========================================================
+    # LOGGING
+    # ==========================================================
 
     log_service = get_log_service(
         db=immo_db,
@@ -129,8 +178,12 @@ def get_sql_agent(
         log_service=log_service,
     )
 
-    return SQLAgent(
-        selector=selector,
+    # ==========================================================
+    # SQL AGENT
+    # ==========================================================
+
+    sql_agent = SQLAgent(
+        selector=knowledge_selector,
         context_builder=context_builder,
         prompt_builder=prompt_builder,
         generator=generator,
@@ -140,6 +193,4 @@ def get_sql_agent(
         execution_logger=execution_logger,
     )
 
-__all__ = [
-    "get_sql_agent",
-]
+    return sql_agent

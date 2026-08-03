@@ -1,9 +1,8 @@
+from __future__ import annotations
+
 from datetime import datetime
 
-from sqlalchemy import (
-    delete,
-    select,
-)
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.database.entities.column_metadata import (
@@ -11,6 +10,10 @@ from app.database.entities.column_metadata import (
 )
 from app.database.repositories.base_repository import (
     BaseRepository,
+)
+
+__all__ = (
+    "ColumnMetadataRepository",
 )
 
 
@@ -21,9 +24,12 @@ class ColumnMetadataRepository(BaseRepository):
 
     def __init__(
         self,
+        *,
         db: Session,
     ) -> None:
-        super().__init__(db=db)
+        super().__init__(
+            db=db,
+        )
 
     # ==========================================================
     # CREATE
@@ -31,6 +37,7 @@ class ColumnMetadataRepository(BaseRepository):
 
     def create(
         self,
+        *,
         column: ColumnMetadataEntity,
     ) -> ColumnMetadataEntity:
         """
@@ -47,6 +54,7 @@ class ColumnMetadataRepository(BaseRepository):
 
     def create_many(
         self,
+        *,
         columns: list[ColumnMetadataEntity],
     ) -> None:
         """
@@ -63,6 +71,7 @@ class ColumnMetadataRepository(BaseRepository):
 
     def get_by_name(
         self,
+        *,
         table_name: str,
         column_name: str,
     ) -> ColumnMetadataEntity | None:
@@ -80,16 +89,19 @@ class ColumnMetadataRepository(BaseRepository):
             )
         )
 
-        return self.db.scalar(
+        column = self._db.scalar(
             statement,
         )
 
+        return column
+
     def get_by_table(
         self,
+        *,
         table_name: str,
     ) -> list[ColumnMetadataEntity]:
         """
-        Retrieve every column of one table.
+        Retrieve every column belonging to one table.
         """
 
         statement = (
@@ -104,11 +116,13 @@ class ColumnMetadataRepository(BaseRepository):
             )
         )
 
-        return list(
-            self.db.scalars(
+        columns = list(
+            self._db.scalars(
                 statement,
             )
         )
+
+        return columns
 
     # ==========================================================
     # DELETE
@@ -125,7 +139,7 @@ class ColumnMetadataRepository(BaseRepository):
             ColumnMetadataEntity,
         )
 
-        self.db.execute(
+        self._db.execute(
             statement,
         )
 
@@ -135,6 +149,7 @@ class ColumnMetadataRepository(BaseRepository):
 
     def update_profile(
         self,
+        *,
         column_id: int,
         semantic_type: str | None,
         example_values: str | None,
@@ -155,27 +170,28 @@ class ColumnMetadataRepository(BaseRepository):
             )
         )
 
-        column = self.db.scalar(
+        column = self._db.scalar(
             statement,
         )
 
         if column is None:
             return
 
+        updated_at = datetime.utcnow()
+
         column.semantic_type = semantic_type
         column.example_values = example_values
         column.min_value = (
-            None if min_value is None else str(min_value)
+            None
+            if min_value is None
+            else str(min_value)
         )
         column.max_value = (
-            None if max_value is None else str(max_value)
+            None
+            if max_value is None
+            else str(max_value)
         )
         column.distinct_count = distinct_count
-        column.last_profiled = datetime.now()
+        column.last_profiled = updated_at
 
         self.commit()
-
-
-__all__ = [
-    "ColumnMetadataRepository",
-]

@@ -1,35 +1,37 @@
+from __future__ import annotations
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.entities.model_config import (
     ModelConfigEntity,
 )
-
 from app.models.agent_models import (
     ModelConfig,
+)
+
+__all__ = (
+    "ModelManager",
 )
 
 
 class ModelManager:
     """
-    Responsible for loading AI model configurations
-    from the database.
+    Responsible for loading AI model configurations.
 
-    Features
-    --------
-    • Cache configurations
-    • Load active models
-    • Support multiple AI agents
-    • Ready for fallback strategies
+    Responsibilities
+    ----------------
+    - Load active model configurations from the database.
+    - Cache configurations in memory.
+    - Refresh cached configurations.
     """
 
     def __init__(
         self,
+        *,
         db: Session,
     ) -> None:
-
-        self.db: Session = db
-
+        self._db = db
         self._cache: dict[str, ModelConfig] = {}
 
     # ==========================================================
@@ -38,49 +40,77 @@ class ModelManager:
 
     def get(
         self,
+        *,
         agent_name: str,
     ) -> ModelConfig:
         """
-        Return the active configuration of an agent.
+        Return the active configuration for an agent.
+
+        Args:
+            agent_name:
+                Name of the AI agent.
+
+        Returns:
+            Active model configuration.
+
+        Raises:
+            ValueError:
+                If no active configuration exists.
         """
 
-        if agent_name in self._cache:
-            return self._cache[agent_name]
+        if agent_name not in self._cache:
+            configuration = self._load_active_model(
+                agent_name=agent_name,
+            )
 
-        config: ModelConfig = self._load_active_model(
-            agent_name=agent_name,
-        )
+            self._cache[agent_name] = configuration
 
-        self._cache[agent_name] = config
+        configuration = self._cache[agent_name]
 
-        return config
-    
+        return configuration
+
     def has_model(
         self,
+        *,
         agent_name: str,
     ) -> bool:
         """
-        Return True if the agent has an active model.
+        Check whether an active model exists.
+
+        Args:
+            agent_name:
+                Name of the AI agent.
+
+        Returns:
+            True if an active model exists, otherwise False.
         """
 
         try:
-
             self.get(
                 agent_name=agent_name,
             )
 
-            return True
+            exists = True
 
         except ValueError:
+            exists = False
 
-            return False
+        return exists
 
     def refresh(
         self,
+        *,
         agent_name: str,
     ) -> ModelConfig:
         """
-        Reload one configuration.
+        Reload a cached model configuration.
+
+        Args:
+            agent_name:
+                Name of the AI agent.
+
+        Returns:
+            Reloaded model configuration.
         """
 
         self._cache.pop(
@@ -88,40 +118,49 @@ class ModelManager:
             None,
         )
 
-        return self.get(
+        configuration = self.get(
             agent_name=agent_name,
         )
 
-    def refresh_cache(
+        return configuration
+
+    def clear_cache(
         self,
     ) -> None:
         """
-        Clear every cached configuration.
+        Clear every cached model configuration.
         """
 
         self._cache.clear()
 
-    def clear_cache(self) -> None:
-        """
-        Clear every cached configuration.
-        """
-
-        self._cache.clear()
     # ==========================================================
     # PRIVATE
     # ==========================================================
 
     def _load_active_model(
         self,
+        *,
         agent_name: str,
     ) -> ModelConfig:
         """
-        Load the active model configuration
-        from the database.
+        Load the active model configuration from the database.
+
+        Args:
+            agent_name:
+                Name of the AI agent.
+
+        Returns:
+            Active model configuration.
+
+        Raises:
+            ValueError:
+                If no active model exists.
         """
 
-        entity: ModelConfigEntity | None = self.db.scalar(
-            select(ModelConfigEntity)
+        statement = (
+            select(
+                ModelConfigEntity,
+            )
             .where(
                 ModelConfigEntity.agent_name == agent_name,
             )
@@ -130,63 +169,60 @@ class ModelManager:
             )
         )
 
+        entity = self._db.scalar(
+            statement,
+        )
+
         if entity is None:
             raise ValueError(
-                f"No active model configured for '{agent_name}'."
+                f"No active model configured for agent '{agent_name}'.",
             )
 
-        return self._to_model(
+        configuration = self._to_model(
             entity=entity,
         )
 
+        return configuration
+
     @staticmethod
     def _to_model(
+        *,
         entity: ModelConfigEntity,
     ) -> ModelConfig:
         """
-        Convert an ORM entity into a ModelConfig.
+        Convert a database entity into a domain model.
+
+        Args:
+            entity:
+                ORM entity.
+
+        Returns:
+            Domain model configuration.
         """
 
-        return ModelConfig(
-
+        configuration = ModelConfig(
             agent_name=entity.agent_name,
-
             provider=entity.provider,
-
             model_name=entity.model_name,
-
             api_key_alias=entity.api_key_alias,
-
             api_base_url=entity.api_base_url,
-
             deployment_name=entity.deployment_name,
-
             system_prompt=entity.system_prompt,
-
             temperature=float(
-                entity.temperature
+                entity.temperature,
             ),
-
             top_p=float(
-                entity.top_p
+                entity.top_p,
             ),
-
             frequency_penalty=float(
-                entity.frequency_penalty
+                entity.frequency_penalty,
             ),
-
             presence_penalty=float(
-                entity.presence_penalty
+                entity.presence_penalty,
             ),
-
             timeout_seconds=entity.timeout_seconds,
-
             max_tokens=entity.max_tokens,
-
             is_active=entity.is_active,
-
         )
 
-    __all__ = [
-        "ModelManager",
-    ]
+        return configuration

@@ -1,7 +1,6 @@
-from sqlalchemy import (
-    delete,
-    select,
-)
+from __future__ import annotations
+
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.database.entities.relationship import (
@@ -9,6 +8,10 @@ from app.database.entities.relationship import (
 )
 from app.database.repositories.base_repository import (
     BaseRepository,
+)
+
+__all__ = (
+    "RelationshipRepository",
 )
 
 
@@ -19,9 +22,12 @@ class RelationshipRepository(BaseRepository):
 
     def __init__(
         self,
+        *,
         db: Session,
     ) -> None:
-        super().__init__(db=db)
+        super().__init__(
+            db=db,
+        )
 
     # ==========================================================
     # CREATE
@@ -29,6 +35,7 @@ class RelationshipRepository(BaseRepository):
 
     def create(
         self,
+        *,
         relationship: RelationshipEntity,
     ) -> RelationshipEntity:
         """
@@ -45,6 +52,7 @@ class RelationshipRepository(BaseRepository):
 
     def create_many(
         self,
+        *,
         relationships: list[RelationshipEntity],
     ) -> None:
         """
@@ -76,11 +84,13 @@ class RelationshipRepository(BaseRepository):
             )
         )
 
-        return list(
-            self.db.scalars(
+        relationships = list(
+            self._db.scalars(
                 statement,
             )
         )
+
+        return relationships
 
     # ==========================================================
     # DELETE
@@ -97,11 +107,6 @@ class RelationshipRepository(BaseRepository):
             RelationshipEntity,
         )
 
-        self.db.execute(
+        self._db.execute(
             statement,
         )
-
-
-__all__ = [
-    "RelationshipRepository",
-]

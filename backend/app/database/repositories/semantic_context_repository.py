@@ -1,52 +1,63 @@
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.database.entities.column_metadata import (
     ColumnMetadataEntity,
 )
-
 from app.database.repositories.base_repository import (
     BaseRepository,
 )
 
-__all__ = [
+__all__ = (
     "SemanticContextRepository",
-]
+)
 
 
 class SemanticContextRepository(BaseRepository):
     """
     Repository used to retrieve the most relevant columns
-    for a natural language question.
+    for a natural-language question.
     """
 
-    MAX_RESULTS = 15
+    _MAX_RESULTS = 15
 
-    EXACT_COLUMN_SCORE = 120
-    PARTIAL_COLUMN_SCORE = 90
+    _EXACT_COLUMN_SCORE = 120
+    _PARTIAL_COLUMN_SCORE = 90
 
-    EXACT_SEMANTIC_SCORE = 100
-    PARTIAL_SEMANTIC_SCORE = 80
+    _EXACT_SEMANTIC_SCORE = 100
+    _PARTIAL_SEMANTIC_SCORE = 80
 
-    EXACT_TABLE_SCORE = 70
-    PARTIAL_TABLE_SCORE = 50
+    _EXACT_TABLE_SCORE = 70
+    _PARTIAL_TABLE_SCORE = 50
 
-    EXAMPLE_SCORE = 60
-    DESCRIPTION_SCORE = 30
+    _EXAMPLE_SCORE = 60
+    _DESCRIPTION_SCORE = 30
 
-    MEASURE_BONUS = 15
-    LOCATION_BONUS = 10
+    _MEASURE_BONUS = 15
+    _LOCATION_BONUS = 10
 
-    FOREIGN_KEY_BONUS = 8
-    PRIMARY_KEY_BONUS = 5
+    _FOREIGN_KEY_BONUS = 8
+    _PRIMARY_KEY_BONUS = 5
 
-    LOCATION_TYPES = {
-        "REGION",
-        "PROVINCE",
-        "COMMUNE",
-        "TIME",
-    }
+    _LOCATION_TYPES = frozenset(
+        {
+            "REGION",
+            "PROVINCE",
+            "COMMUNE",
+            "TIME",
+        }
+    )
+
+    def __init__(
+        self,
+        *,
+        db: Session,
+    ) -> None:
+        super().__init__(
+            db=db,
+        )
 
     # ==========================================================
     # PUBLIC
@@ -54,10 +65,18 @@ class SemanticContextRepository(BaseRepository):
 
     def search(
         self,
+        *,
         keywords: list[str],
     ) -> list[ColumnMetadataEntity]:
         """
-        Return the most relevant searchable columns.
+        Retrieve the most relevant searchable columns.
+
+        Args:
+            keywords:
+                Extracted keywords from the user question.
+
+        Returns:
+            Ranked list of matching columns.
         """
 
         if not keywords:
@@ -68,12 +87,15 @@ class SemanticContextRepository(BaseRepository):
                 ColumnMetadataEntity,
             )
             .where(
-                ColumnMetadataEntity.is_searchable == True
+                (
+                    ColumnMetadataEntity.is_searchable
+                    == True
+                ),
             )
         )
 
         columns = list(
-            self.db.scalars(
+            self._db.scalars(
                 statement,
             )
         )
@@ -83,7 +105,6 @@ class SemanticContextRepository(BaseRepository):
         ] = []
 
         for column in columns:
-
             score = self._compute_score(
                 column=column,
                 keywords=keywords,
@@ -104,12 +125,14 @@ class SemanticContextRepository(BaseRepository):
             reverse=True,
         )
 
-        return [
+        ranked_columns = [
             column
             for _, column in scored_columns[
-                : self.MAX_RESULTS
+                : self._MAX_RESULTS
             ]
         ]
+
+        return ranked_columns
 
     # ==========================================================
     # PRIVATE
@@ -117,11 +140,22 @@ class SemanticContextRepository(BaseRepository):
 
     def _compute_score(
         self,
+        *,
         column: ColumnMetadataEntity,
         keywords: list[str],
     ) -> int:
         """
-        Compute a relevance score for one column.
+        Compute the semantic relevance score of one column.
+
+        Args:
+            column:
+                Metadata column.
+
+            keywords:
+                Extracted keywords.
+
+        Returns:
+            Relevance score.
         """
 
         score = 0
@@ -147,47 +181,46 @@ class SemanticContextRepository(BaseRepository):
         ).lower()
 
         for keyword in keywords:
-
             keyword = keyword.lower()
 
             if keyword == column_name:
-                score += self.EXACT_COLUMN_SCORE
+                score += self._EXACT_COLUMN_SCORE
 
             elif keyword in column_name:
-                score += self.PARTIAL_COLUMN_SCORE
+                score += self._PARTIAL_COLUMN_SCORE
 
             if keyword == semantic_type:
-                score += self.EXACT_SEMANTIC_SCORE
+                score += self._EXACT_SEMANTIC_SCORE
 
             elif keyword in semantic_type:
-                score += self.PARTIAL_SEMANTIC_SCORE
+                score += self._PARTIAL_SEMANTIC_SCORE
 
             if keyword == table_name:
-                score += self.EXACT_TABLE_SCORE
+                score += self._EXACT_TABLE_SCORE
 
             elif keyword in table_name:
-                score += self.PARTIAL_TABLE_SCORE
+                score += self._PARTIAL_TABLE_SCORE
 
             if keyword in examples:
-                score += self.EXAMPLE_SCORE
+                score += self._EXAMPLE_SCORE
 
             if keyword in description:
-                score += self.DESCRIPTION_SCORE
+                score += self._DESCRIPTION_SCORE
 
         semantic_type_upper = (
             column.semantic_type or ""
         ).upper()
 
         if semantic_type_upper == "MEASURE":
-            score += self.MEASURE_BONUS
+            score += self._MEASURE_BONUS
 
-        elif semantic_type_upper in self.LOCATION_TYPES:
-            score += self.LOCATION_BONUS
+        elif semantic_type_upper in self._LOCATION_TYPES:
+            score += self._LOCATION_BONUS
 
         if column.is_foreign_key:
-            score += self.FOREIGN_KEY_BONUS
+            score += self._FOREIGN_KEY_BONUS
 
         if column.is_primary_key:
-            score += self.PRIMARY_KEY_BONUS
+            score += self._PRIMARY_KEY_BONUS
 
         return score

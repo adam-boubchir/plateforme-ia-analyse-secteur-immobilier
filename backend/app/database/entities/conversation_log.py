@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -13,15 +15,21 @@ from sqlalchemy.orm import (
     mapped_column,
 )
 
-from app.database.entities.base import Base
+from app.database.entities.base import (
+    Base,
+)
+
+__all__ = (
+    "ConversationLog",
+)
 
 
 class ConversationLog(Base):
     """
-    ORM entity storing the complete execution trace
+    Database entity storing the complete execution trace
     of one AI request.
 
-    One log corresponds to one user question.
+    One record corresponds to one execution of an AI agent.
     """
 
     __tablename__ = "conversation_logs"
@@ -38,13 +46,17 @@ class ConversationLog(Base):
     )
 
     conversation_id: Mapped[int] = mapped_column(
-        ForeignKey("conversations.id"),
+        ForeignKey(
+            "conversations.id",
+        ),
         nullable=False,
         index=True,
     )
 
     message_id: Mapped[int | None] = mapped_column(
-        ForeignKey("conversation_messages.id"),
+        ForeignKey(
+            "conversation_messages.id",
+        ),
         nullable=True,
         index=True,
     )
@@ -163,8 +175,3 @@ class ConversationLog(Base):
         nullable=False,
         server_default=func.now(),
     )
-
-
-__all__ = [
-    "ConversationLog",
-]

@@ -5,7 +5,7 @@ from app.agents.chat_agent.chat_generator import ChatGenerator
 from app.agents.chat_agent.chat_prompt_builder import ChatPromptBuilder
 from app.models.chat_agent_models import ChatAgentResponse
 
-__all__ = ["ChatAgent"]
+__all__ = ("ChatAgent",)
 
 
 class ChatAgent(BaseAgent):
@@ -15,20 +15,21 @@ class ChatAgent(BaseAgent):
     Pipeline:
         User Question
             ↓
-        Prompt Building
+        Prompt Builder
             ↓
-        LLM Generation
+        LLM Generator
             ↓
         Chat Response
     """
 
     def __init__(
         self,
+        *,
         prompt_builder: ChatPromptBuilder,
         generator: ChatGenerator,
     ) -> None:
-        self.prompt_builder = prompt_builder
-        self.generator = generator
+        self._prompt_builder = prompt_builder
+        self._generator = generator
 
     # ==========================================================
     # PUBLIC
@@ -36,6 +37,7 @@ class ChatAgent(BaseAgent):
 
     def ask(
         self,
+        *,
         question: str,
         conversation_id: int,
     ) -> ChatAgentResponse:
@@ -44,18 +46,19 @@ class ChatAgent(BaseAgent):
 
         Args:
             question: User question.
-            conversation_id: Conversation identifier (reserved for future use).
+            conversation_id: Conversation identifier
+                (reserved for future use).
 
         Returns:
-            ChatAgentResponse containing the generated answer.
+            Generated conversational response.
         """
 
-        prompt = self.prompt_builder.build_prompt(
+        prompt = self._prompt_builder.build_prompt(
             question=question,
         )
 
-        answer = self.generator.generate(
-            prompt,
+        answer = self._generator.generate(
+            prompt=prompt,
         )
 
         return ChatAgentResponse(

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-__all__ = ["PromptRulesBuilder"]
+__all__ = ("PromptRulesBuilder",)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-SECTION_TITLE = "SQL GENERATION RULES"
+_SECTION_TITLE = "SQL GENERATION RULES"
 
-SECTION_SEPARATOR = "=" * 100
+_SECTION_SEPARATOR = "=" * 100
 
-PROMPT_RULES: tuple[str, ...] = (
+_PROMPT_RULES: tuple[str, ...] = (
     "Generate ONLY one SQL query.",
     "Return ONLY SQL.",
     "Do not explain the query.",
@@ -48,14 +48,17 @@ class PromptRulesBuilder:
     ) -> list[str]:
         """
         Build the SQL generation rules section.
+
+        Returns:
+            List of formatted SQL generation rules.
         """
 
         return [
-            SECTION_TITLE,
+            _SECTION_TITLE,
             "",
             *self._build_rules(),
             "",
-            SECTION_SEPARATOR,
+            _SECTION_SEPARATOR,
             "",
         ]
 
@@ -63,17 +66,19 @@ class PromptRulesBuilder:
     # PRIVATE
     # ==========================================================
 
-    def _build_rules(
-        self,
-    ) -> list[str]:
+    @staticmethod
+    def _build_rules() -> list[str]:
         """
         Format all SQL generation rules.
+
+        Returns:
+            Numbered list of SQL generation rules.
         """
 
         return [
             f"{index}. {rule}"
             for index, rule in enumerate(
-                PROMPT_RULES,
+                _PROMPT_RULES,
                 start=1,
             )
         ]

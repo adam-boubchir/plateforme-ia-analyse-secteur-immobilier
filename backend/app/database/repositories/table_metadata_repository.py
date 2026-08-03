@@ -1,7 +1,6 @@
-from sqlalchemy import (
-    delete,
-    select,
-)
+from __future__ import annotations
+
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.database.entities.table_metadata import (
@@ -9,6 +8,10 @@ from app.database.entities.table_metadata import (
 )
 from app.database.repositories.base_repository import (
     BaseRepository,
+)
+
+__all__ = (
+    "TableMetadataRepository",
 )
 
 
@@ -19,9 +22,12 @@ class TableMetadataRepository(BaseRepository):
 
     def __init__(
         self,
+        *,
         db: Session,
     ) -> None:
-        super().__init__(db=db)
+        super().__init__(
+            db=db,
+        )
 
     # ==========================================================
     # CREATE
@@ -29,6 +35,7 @@ class TableMetadataRepository(BaseRepository):
 
     def create(
         self,
+        *,
         table: TableMetadataEntity,
     ) -> TableMetadataEntity:
         """
@@ -45,6 +52,7 @@ class TableMetadataRepository(BaseRepository):
 
     def create_many(
         self,
+        *,
         tables: list[TableMetadataEntity],
     ) -> None:
         """
@@ -61,6 +69,7 @@ class TableMetadataRepository(BaseRepository):
 
     def get_by_name(
         self,
+        *,
         schema_name: str,
         table_name: str,
     ) -> TableMetadataEntity | None:
@@ -78,12 +87,15 @@ class TableMetadataRepository(BaseRepository):
             )
         )
 
-        return self.db.scalar(
+        table = self._db.scalar(
             statement,
         )
 
+        return table
+
     def exists(
         self,
+        *,
         schema_name: str,
         table_name: str,
     ) -> bool:
@@ -91,13 +103,14 @@ class TableMetadataRepository(BaseRepository):
         Check whether a table metadata entry exists.
         """
 
-        return (
-            self.get_by_name(
-                schema_name=schema_name,
-                table_name=table_name,
-            )
-            is not None
+        table = self.get_by_name(
+            schema_name=schema_name,
+            table_name=table_name,
         )
+
+        exists = table is not None
+
+        return exists
 
     def get_all(
         self,
@@ -116,11 +129,13 @@ class TableMetadataRepository(BaseRepository):
             )
         )
 
-        return list(
-            self.db.scalars(
+        tables = list(
+            self._db.scalars(
                 statement,
             )
         )
+
+        return tables
 
     # ==========================================================
     # DELETE
@@ -137,11 +152,6 @@ class TableMetadataRepository(BaseRepository):
             TableMetadataEntity,
         )
 
-        self.db.execute(
+        self._db.execute(
             statement,
         )
-
-
-__all__ = [
-    "TableMetadataRepository",
-]

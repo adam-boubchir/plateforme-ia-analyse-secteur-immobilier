@@ -1,82 +1,88 @@
+from __future__ import annotations
+
 import re
 from typing import Any
 
-from app.database.entities.column_metadata import ColumnMetadataEntity
-from app.database.entities.table_metadata import TableMetadataEntity
-from app.database.entities.relationship import RelationshipEntity
+from app.database.entities.column_metadata import (
+    ColumnMetadataEntity,
+)
 from app.database.repositories.semantic_context_repository import (
     SemanticContextRepository,
+)
+
+__all__ = (
+    "SemanticContextService",
 )
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-STOP_WORDS: set[str] = {
-    "le",
-    "la",
-    "les",
-    "de",
-    "des",
-    "du",
-    "dans",
-    "sur",
-    "sous",
-    "pour",
-    "par",
-    "avec",
-    "sans",
-    "et",
-    "ou",
-    "un",
-    "une",
-    "est",
-    "sont",
-    "quel",
-    "quelle",
-    "quels",
-    "quelles",
-    "donne",
-    "donner",
-    "montre",
-    "affiche",
-    "liste",
-    "voir",
-    "afficher",
-    "peux",
-    "peut",
-    "avoir",
-    "faire",
-    "tous",
-    "toutes",
-    "entre",
-    "vers",
-    "chez",
-    "plus",
-    "moins",
-    "combien",
-    "moi",
-}
+_STOP_WORDS: frozenset[str] = frozenset(
+    {
+        "le",
+        "la",
+        "les",
+        "de",
+        "des",
+        "du",
+        "dans",
+        "sur",
+        "sous",
+        "pour",
+        "par",
+        "avec",
+        "sans",
+        "et",
+        "ou",
+        "un",
+        "une",
+        "est",
+        "sont",
+        "quel",
+        "quelle",
+        "quels",
+        "quelles",
+        "donne",
+        "donner",
+        "montre",
+        "affiche",
+        "liste",
+        "voir",
+        "afficher",
+        "peux",
+        "peut",
+        "avoir",
+        "faire",
+        "tous",
+        "toutes",
+        "entre",
+        "vers",
+        "chez",
+        "plus",
+        "moins",
+        "combien",
+        "moi",
+    }
+)
 
-WORD_PATTERN = re.compile(
-    r"[a-zA-ZÀ-ÿ0-9]+"
+_WORD_PATTERN = re.compile(
+    r"[a-zA-ZÀ-ÿ0-9]+",
 )
 
 
 class SemanticContextService:
     """
-    Service responsible for retrieving the semantic
-    database context associated with a user question.
+    Retrieve the semantic database context associated with a
+    natural-language question.
     """
 
     def __init__(
         self,
+        *,
         repository: SemanticContextRepository,
     ) -> None:
-
-        self.repository: SemanticContextRepository = (
-            repository
-        )
+        self._repository = repository
 
     # ==========================================================
     # PUBLIC
@@ -84,42 +90,58 @@ class SemanticContextService:
 
     def build(
         self,
+        *,
         question: str,
     ) -> list[dict[str, Any]]:
         """
         Build the semantic context used by the SQL Agent.
+
+        Args:
+            question:
+                User natural-language question.
+
+        Returns:
+            List of semantic context items.
         """
 
-        keywords: list[str] = self._extract_keywords(
+        keywords = self._extract_keywords(
             question=question,
         )
 
-        columns: list[ColumnMetadataEntity] = (
-            self.repository.search(
-                keywords=keywords,
-            )
+        columns = self._repository.search(
+            keywords=keywords,
         )
 
-        return [
+        context_items = [
             self._build_context_item(
                 column=column,
             )
             for column in columns
         ]
 
+        return context_items
+
     # ==========================================================
     # PRIVATE
     # ==========================================================
 
+    @staticmethod
     def _build_context_item(
-        self,
+        *,
         column: ColumnMetadataEntity,
     ) -> dict[str, Any]:
         """
-        Build one semantic context item.
+        Convert one metadata entity into a semantic context item.
+
+        Args:
+            column:
+                Column metadata entity.
+
+        Returns:
+            Dictionary consumed by the SemanticContextBuilder.
         """
 
-        return {
+        context_item = {
             "table": column.table_name,
             "column": column.column_name,
             "semantic_type": column.semantic_type,
@@ -136,40 +158,47 @@ class SemanticContextService:
             ),
         }
 
+        return context_item
+
+    @staticmethod
     def _extract_keywords(
-        self,
+        *,
         question: str,
     ) -> list[str]:
         """
-        Extract meaningful keywords from
-        a natural language question.
+        Extract meaningful keywords from a natural-language question.
+
+        Args:
+            question:
+                User question.
+
+        Returns:
+            Ordered list of unique keywords.
         """
 
-        words: list[str] = WORD_PATTERN.findall(
-            question.lower(),
+        words = _WORD_PATTERN.findall(
+            question.casefold(),
         )
 
         keywords: list[str] = []
 
         for word in words:
-
             word = word.strip()
 
             if len(word) < 2:
                 continue
 
-            if word in STOP_WORDS:
+            if word in _STOP_WORDS:
                 continue
 
-            keywords.append(word)
+            keywords.append(
+                word,
+            )
 
-        return list(
+        unique_keywords = list(
             dict.fromkeys(
                 keywords,
             )
         )
 
-
-__all__ = [
-    "SemanticContextService",
-]
+        return unique_keywords

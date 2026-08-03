@@ -4,10 +4,10 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-__all__ = [
+__all__ = (
     "AgentType",
     "OrchestratorDecision",
-]
+)
 
 
 class AgentType(str, Enum):
@@ -47,5 +47,5 @@ class OrchestratorDecision(BaseModel):
     reason: str = Field(
         ...,
         min_length=1,
-        description="Reason explaining why the selected agent was chosen.",
+        description="Reason explaining why the selected agent was selected.",
     )

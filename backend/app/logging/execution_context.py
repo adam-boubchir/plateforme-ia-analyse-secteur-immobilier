@@ -1,15 +1,23 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+
+__all__ = (
+    "ExecutionContext",
+)
 
 
-@dataclass
+@dataclass(slots=True)
 class ExecutionContext:
     """
-    Shared execution context used by every AI Agent.
+    Shared execution context used throughout the complete AI
+    execution pipeline.
 
-    This object travels through the complete execution
-    pipeline and is finally persisted into conversation_logs.
+    This object is progressively enriched by each component
+    (context builder, SQL generator, validator, executor,
+    formatter, logger...) before finally being persisted into
+    the conversation logs.
     """
 
     # ==========================================================
@@ -34,7 +42,7 @@ class ExecutionContext:
 
     join_knowledge: str | None = None
 
-    forbidden_joins: str | None = None
+    forbidden_joins: str |None = None
 
     semantic_context: str | None = None
 
@@ -60,7 +68,7 @@ class ExecutionContext:
     # SQL Result
     # ==========================================================
 
-    sql_result: Any | None = None
+    sql_result: object | None = None
 
     formatted_answer: str | None = None
 

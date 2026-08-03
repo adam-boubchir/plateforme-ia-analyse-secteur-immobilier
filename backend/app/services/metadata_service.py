@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.database.entities.column_metadata import (
     ColumnMetadataEntity,
 )
@@ -17,31 +19,28 @@ from app.database.repositories.table_metadata_repository import (
     TableMetadataRepository,
 )
 
+__all__ = ("MetadataService",)
+
 
 class MetadataService:
     """
-    Service responsible for providing database metadata
-    to the SQL Agent.
+    Provide database metadata required by the SQL Agent.
+
+    This service acts as a thin abstraction layer over the metadata
+    repositories and exposes a unified API for retrieving tables,
+    columns and relationships.
     """
 
     def __init__(
         self,
+        *,
         table_repository: TableMetadataRepository,
         column_repository: ColumnMetadataRepository,
         relationship_repository: RelationshipRepository,
     ) -> None:
-
-        self.table_repository: TableMetadataEntityRepository = (
-            table_repository
-        )
-
-        self.column_repository: ColumnMetadataRepository = (
-            column_repository
-        )
-
-        self.relationship_repository: RelationshipRepository = (
-            relationship_repository
-        )
+        self._table_repository = table_repository
+        self._column_repository = column_repository
+        self._relationship_repository = relationship_repository
 
     # ==========================================================
     # PUBLIC
@@ -51,47 +50,74 @@ class MetadataService:
         self,
     ) -> list[TableMetadataEntity]:
         """
-        Return all database tables.
+        Retrieve every table available in the metadata catalog.
+
+        Returns:
+            List of table metadata.
         """
 
-        return self.table_repository.get_all()
+        tables = self._table_repository.get_all()
+
+        return tables
 
     def get_table(
         self,
+        *,
         schema_name: str,
         table_name: str,
     ) -> TableMetadataEntity | None:
         """
-        Return one table.
+        Retrieve one table by its schema and name.
+
+        Args:
+            schema_name:
+                Database schema.
+            table_name:
+                Table name.
+
+        Returns:
+            The matching table metadata, or None if not found.
         """
 
-        return self.table_repository.get_by_name(
+        table = self._table_repository.get_by_name(
             schema_name=schema_name,
             table_name=table_name,
         )
 
+        return table
+
     def get_columns(
         self,
+        *,
         table_name: str,
     ) -> list[ColumnMetadataEntity]:
         """
-        Return all columns of one table.
+        Retrieve every column belonging to one table.
+
+        Args:
+            table_name:
+                Table name.
+
+        Returns:
+            List of column metadata.
         """
 
-        return self.column_repository.get_by_table(
+        columns = self._column_repository.get_by_table(
             table_name=table_name,
         )
+
+        return columns
 
     def get_relationships(
         self,
     ) -> list[RelationshipEntity]:
         """
-        Return all relationships.
+        Retrieve every relationship between database tables.
+
+        Returns:
+            List of relationship metadata.
         """
 
-        return self.relationship_repository.get_all()
+        relationships = self._relationship_repository.get_all()
 
-
-__all__ = [
-    "MetadataService",
-]
+        return relationships

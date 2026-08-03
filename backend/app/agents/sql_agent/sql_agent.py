@@ -51,7 +51,7 @@ from app.agents.sql_agent.exceptions import (
     EmptySQLQueryException,
 )
 
-__all__ = ["SQLAgent"]
+__all__ = ("SQLAgent",)
 
 CANNOT_GENERATE_SQL_ERROR = "CANNOT_GENERATE_SQL"
 EMPTY_SQL_ERROR = "EMPTY_SQL"
@@ -81,6 +81,7 @@ class SQLAgent(BaseAgent):
 
     def __init__(
         self,
+        *,
         selector: KnowledgeSelector,
         context_builder: SQLContextBuilder,
         prompt_builder: PromptBuilder,
@@ -90,24 +91,25 @@ class SQLAgent(BaseAgent):
         formatter: SQLResponseFormatter,
         execution_logger: ExecutionLogger,
     ) -> None:
-        self.selector = selector
-        self.context_builder = context_builder
-        self.prompt_builder = prompt_builder
-        self.generator = generator
-        self.validator = validator
-        self.executor = executor
-        self.formatter = formatter
-        self.execution_logger = execution_logger
+        self._selector = selector
+        self._context_builder = context_builder
+        self._prompt_builder = prompt_builder
+        self._generator = generator
+        self._validator = validator
+        self._executor = executor
+        self._formatter = formatter
+        self._execution_logger = execution_logger
 
 
     def _select_knowledge(
         self,
+        *,
         question: str,
         execution: ConversationLog,
     ) -> dict[str, Any]:
 
-        selection = self.selector.select(
-            question
+        selection = self._selector.select(
+            question=question,
         )
 
         execution.selected_tables = ", ".join(
@@ -118,32 +120,34 @@ class SQLAgent(BaseAgent):
 
     def _build_context(
         self,
+        *,
         question: str,
         selection: dict[str, Any],
         execution: ConversationLog,
     ) -> dict[str, Any]:
 
-        context_data = self.context_builder.build_context(
+        context_data = self._context_builder.build_context(
             question=question,
             selection=selection,
         )
 
         self._populate_execution_context(
-            execution,
-            context_data,
+            execution=execution,
+            context_data=context_data,
         )
 
         return context_data
 
     def _build_prompt(
         self,
-        question,
-        context_data,
-        selection,
-        execution,
+        *,
+        question: str,
+        context_data: dict[str, Any],
+        selection: dict[str, Any],
+        execution: ConversationLog,
     ) -> str:
 
-        prompt = self.prompt_builder.build_prompt(
+        prompt = self._prompt_builder.build_prompt(
             question=question,
             context=context_data.get(
                 "full_context",
@@ -158,11 +162,14 @@ class SQLAgent(BaseAgent):
 
     def _generate_sql(
         self,
-        prompt,
-        execution,
+        *,
+        prompt: str,
+        execution: ConversationLog,
     ) -> str:
 
-        sql = self.generator.generate(prompt)
+        sql = self._generator.generate(
+            prompt=prompt,
+        )
 
         execution.generated_sql = sql
 
@@ -172,7 +179,9 @@ class SQLAgent(BaseAgent):
         if sql == CANNOT_GENERATE_SQL_ERROR:
             raise CannotGenerateSQLException()
 
-        sql = self.validator.validate(sql)
+        sql = self._validator.validate(
+            sql=sql,
+        )
 
         execution.validated_sql = sql
 
@@ -180,11 +189,14 @@ class SQLAgent(BaseAgent):
 
     def _execute_sql(
         self,
-        sql,
-        execution,
+        *,
+        sql: str,
+        execution: ConversationLog,
     ) -> list[dict[str, Any]]:
 
-        rows = self.executor.execute(sql)
+        rows = self._executor.execute(
+            sql=sql,
+        )
 
         execution.sql_result = json.dumps(
             rows,
@@ -196,11 +208,14 @@ class SQLAgent(BaseAgent):
 
     def _format_response(
         self,
-        rows,
-        execution,
+        *,
+        rows: list[dict[str, Any]],
+        execution: ConversationLog,
     ) -> str:
 
-        answer = self.formatter.format(rows)
+        answer = self._formatter.format(
+            rows=rows,
+        )
 
         execution.formatted_answer = answer
 
@@ -208,6 +223,7 @@ class SQLAgent(BaseAgent):
 
     def _populate_execution_context(
         self,
+        *,
         execution: ConversationLog,
         context_data: dict[str, Any],
     ) -> None:
@@ -247,6 +263,7 @@ class SQLAgent(BaseAgent):
 
     def _execute_pipeline(
         self,
+        *,
         question: str,
         execution: ConversationLog,
     ) -> SQLAgentResponse:
@@ -255,36 +272,36 @@ class SQLAgent(BaseAgent):
         """
 
         selection = self._select_knowledge(
-            question,
-            execution,
+            question=question,
+            execution=execution,
         )
 
         context_data = self._build_context(
-            question,
-            selection,
-            execution,
+            question=question,
+            selection=selection,
+            execution=execution,
         )
 
         prompt = self._build_prompt(
-            question,
-            context_data,
-            selection,
-            execution,
+            question=question,
+            context_data=context_data,
+            selection=selection,
+            execution=execution,
         )
 
         sql = self._generate_sql(
-            prompt,
-            execution,
+            prompt=prompt,
+            execution=execution,
         )
 
         rows = self._execute_sql(
-            sql,
-            execution,
+            sql=sql,
+            execution=execution,
         )
 
         answer = self._format_response(
-            rows,
-            execution,
+            rows=rows,
+            execution=execution,
         )
 
         return self._success_response(
@@ -306,14 +323,15 @@ class SQLAgent(BaseAgent):
             ),
             sql=None,
             rows=[],
-            error="CANNOT_GENERATE_SQL",
+            error=CANNOT_GENERATE_SQL_ERROR,
         )
 
     def _success_response(
         self,
+        *,
         answer: str,
         sql: str,
-        rows: list[dict],
+        rows: list[dict[str, Any]],
     ) -> SQLAgentResponse:
         """
         Build the response returned after a successful SQL execution.
@@ -333,6 +351,7 @@ class SQLAgent(BaseAgent):
 
     def ask(
         self,
+        *,
         question: str,
         conversation_id: int,
     ) -> SQLAgentResponse:
@@ -340,7 +359,7 @@ class SQLAgent(BaseAgent):
         Execute the complete SQL Agent pipeline.
         """
 
-        execution = self.execution_logger.start(
+        execution = self._execution_logger.start(
             question=question,
             conversation_id=conversation_id,
         )
@@ -348,12 +367,12 @@ class SQLAgent(BaseAgent):
         try:
 
             response = self._execute_pipeline(
-                question,
-                execution,
+                question=question,
+                execution=execution,
             )
 
-            self.execution_logger.finish(
-                execution,
+            self._execution_logger.finish(
+                context=execution,
             )
 
             return response
@@ -362,26 +381,26 @@ class SQLAgent(BaseAgent):
 
             execution.error = CANNOT_GENERATE_SQL_ERROR
 
-            self.execution_logger.finish(
-                execution,
+            self._execution_logger.finish(
+                context=execution,
             )
 
             return self._cannot_generate_response()
 
         except EmptySQLQueryException as ex:
 
-            self.execution_logger.fail(
-                execution,
-                ex,
+            self._execution_logger.fail(
+                context=execution,
+                error=ex,
             )
 
             raise
 
         except Exception as ex:
 
-            self.execution_logger.fail(
-                execution,
-                ex,
+            self._execution_logger.fail(
+                context=execution,
+                error=ex,
             )
 
             raise

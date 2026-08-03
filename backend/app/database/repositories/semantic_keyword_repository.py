@@ -1,6 +1,14 @@
+from __future__ import annotations
+
+from typing import Any
+
 from sqlalchemy import text
 from sqlalchemy.engine import RowMapping
 from sqlalchemy.orm import Session
+
+__all__ = [
+    "SemanticKeywordRepository",
+]
 
 
 class SemanticKeywordRepository:
@@ -8,7 +16,7 @@ class SemanticKeywordRepository:
     Repository responsible for retrieving semantic keywords.
     """
 
-    GET_ALL_QUERY = text(
+    _GET_ALL_QUERY = text(
         """
         SELECT
             keyword,
@@ -23,7 +31,7 @@ class SemanticKeywordRepository:
         self,
         db: Session,
     ) -> None:
-        self.db: Session = db
+        self._db = db
 
     # ==========================================================
     # READ
@@ -31,13 +39,13 @@ class SemanticKeywordRepository:
 
     def get_all(
         self,
-    ) -> list[dict[str, str | int]]:
+    ) -> list[dict[str, Any]]:
         """
         Retrieve every semantic keyword ordered by score.
         """
 
-        result = self.db.execute(
-            statement=self.GET_ALL_QUERY,
+        result = self._db.execute(
+            statement=self._GET_ALL_QUERY,
         )
 
         rows: list[RowMapping] = result.mappings().all()
@@ -50,8 +58,3 @@ class SemanticKeywordRepository:
             }
             for row in rows
         ]
-
-
-__all__ = [
-    "SemanticKeywordRepository",
-]

@@ -1,7 +1,6 @@
-from sqlalchemy import (
-    func,
-    select,
-)
+from __future__ import annotations
+
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database.entities.conversation_message import (
@@ -10,6 +9,10 @@ from app.database.entities.conversation_message import (
 from app.database.repositories.base_repository import (
     BaseRepository,
 )
+
+__all__ = [
+    "ConversationMessageRepository",
+]
 
 
 class ConversationMessageRepository(BaseRepository):
@@ -29,6 +32,7 @@ class ConversationMessageRepository(BaseRepository):
 
     def create(
         self,
+        *,
         message: ConversationMessage,
     ) -> ConversationMessage:
         """
@@ -49,6 +53,7 @@ class ConversationMessageRepository(BaseRepository):
 
     def get_by_id(
         self,
+        *,
         message_id: int,
     ) -> ConversationMessage | None:
         """
@@ -56,19 +61,17 @@ class ConversationMessageRepository(BaseRepository):
         """
 
         statement = (
-            select(
-                ConversationMessage,
-            ).where(
+            select(ConversationMessage)
+            .where(
                 ConversationMessage.id == message_id,
             )
         )
 
-        return self.db.scalar(
-            statement,
-        )
+        return self._db.scalar(statement)
 
     def get_by_conversation(
         self,
+        *,
         conversation_id: int,
     ) -> list[ConversationMessage]:
         """
@@ -76,9 +79,7 @@ class ConversationMessageRepository(BaseRepository):
         """
 
         statement = (
-            select(
-                ConversationMessage,
-            )
+            select(ConversationMessage)
             .where(
                 ConversationMessage.conversation_id == conversation_id,
             )
@@ -88,13 +89,12 @@ class ConversationMessageRepository(BaseRepository):
         )
 
         return list(
-            self.db.scalars(
-                statement,
-            )
+            self._db.scalars(statement)
         )
 
     def count_messages(
         self,
+        *,
         conversation_id: int,
     ) -> int:
         """
@@ -102,20 +102,14 @@ class ConversationMessageRepository(BaseRepository):
         """
 
         statement = (
-            select(
-                func.count(),
-            )
-            .select_from(
-                ConversationMessage,
-            )
+            select(func.count())
+            .select_from(ConversationMessage)
             .where(
                 ConversationMessage.conversation_id == conversation_id,
             )
         )
 
-        return self.db.scalar(
-            statement,
-        ) or 0
+        return self._db.scalar(statement) or 0
 
     # ==========================================================
     # UPDATE
@@ -123,6 +117,7 @@ class ConversationMessageRepository(BaseRepository):
 
     def update(
         self,
+        *,
         message: ConversationMessage,
     ) -> ConversationMessage:
         """
@@ -139,17 +134,13 @@ class ConversationMessageRepository(BaseRepository):
 
     def delete(
         self,
+        *,
         message: ConversationMessage,
     ) -> None:
         """
         Delete one message.
         """
 
-        self.db.delete(
-            message,
+        super().delete(
+            entity=message,
         )
-
-
-__all__ = [
-    "ConversationMessageRepository",
-]

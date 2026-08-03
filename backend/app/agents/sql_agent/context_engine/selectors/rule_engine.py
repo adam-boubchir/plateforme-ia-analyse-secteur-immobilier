@@ -4,7 +4,7 @@ from app.agents.sql_agent.context_engine.selectors.rules import (
     Rule,
 )
 
-__all__ = ["RuleEngine"]
+__all__ = ("RuleEngine",)
 
 
 class RuleEngine:
@@ -14,15 +14,16 @@ class RuleEngine:
     Responsibilities
     ----------------
     - Normalize the user question.
-    - Evaluate all available rules.
-    - Return the activated rules.
+    - Evaluate every registered business rule.
+    - Return the list of activated rules.
     """
 
     def __init__(
         self,
+        *,
         rules: list[Rule],
     ) -> None:
-        self.rules = rules
+        self._rules = rules
 
     # ==========================================================
     # PUBLIC
@@ -30,49 +31,82 @@ class RuleEngine:
 
     def evaluate(
         self,
+        *,
         question: str,
     ) -> list[Rule]:
         """
-        Evaluate all business rules and return the activated ones.
+        Evaluate every business rule against a user question.
+
+        Args:
+            question:
+                User natural-language question.
+
+        Returns:
+            List of activated business rules.
         """
 
         normalized_question = self._normalize_question(
-            question,
+            question=question,
         )
 
-        return [
+        activated_rules = [
             rule
-            for rule in self.rules
+            for rule in self._rules
             if self._matches_rule(
-                normalized_question,
-                rule,
+                question=normalized_question,
+                rule=rule,
             )
         ]
+
+        return activated_rules
 
     # ==========================================================
     # PRIVATE
     # ==========================================================
 
+    @staticmethod
     def _normalize_question(
-        self,
+        *,
         question: str,
     ) -> str:
         """
-        Normalize the user question before rule evaluation.
+        Normalize a user question before evaluating rules.
+
+        Args:
+            question:
+                User question.
+
+        Returns:
+            Normalized question.
         """
 
-        return question.casefold()
+        normalized_question = question.casefold().strip()
 
+        return normalized_question
+
+    @staticmethod
     def _matches_rule(
-        self,
+        *,
         question: str,
         rule: Rule,
     ) -> bool:
         """
-        Return True if at least one rule keyword matches the question.
+        Determine whether a rule matches the user question.
+
+        Args:
+            question:
+                Normalized user question.
+
+            rule:
+                Business rule.
+
+        Returns:
+            True if at least one keyword matches.
         """
 
-        return any(
+        has_match = any(
             keyword.casefold() in question
             for keyword in rule.keywords
         )
+
+        return has_match

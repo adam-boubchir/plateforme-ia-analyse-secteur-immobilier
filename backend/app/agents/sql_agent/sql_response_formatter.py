@@ -2,22 +2,22 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["SQLResponseFormatter"]
+__all__ = ("SQLResponseFormatter",)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-EMPTY_RESULT_MESSAGE = (
+_EMPTY_RESULT_MESSAGE = (
     "Aucune donnée ne correspond à votre demande."
 )
 
-SINGLE_RESULT_MESSAGE = (
+_SINGLE_RESULT_MESSAGE = (
     "Votre requête a retourné un seul résultat.\n\n"
     "Les informations sont disponibles dans le tableau des résultats."
 )
 
-MULTIPLE_RESULTS_TEMPLATE = (
+_MULTIPLE_RESULTS_TEMPLATE = (
     "La requête SQL a retourné {total} résultats.\n\n"
     "Les données sont affichées dans le tableau.\n\n"
     "Vous pouvez :\n"
@@ -33,8 +33,11 @@ class SQLResponseFormatter:
     """
     Format SQL execution results.
 
-    This class does not interpret SQL data.
-    It only summarizes the execution outcome.
+    Responsibilities
+    ----------------
+    - Summarize the SQL execution result.
+    - Produce a user-friendly message.
+    - Avoid interpreting SQL data.
 
     Natural-language explanations should be produced
     by a dedicated Response Agent.
@@ -46,50 +49,73 @@ class SQLResponseFormatter:
 
     def format(
         self,
+        *,
         rows: list[dict[str, Any]],
     ) -> str:
         """
-        Build a user-friendly summary of the SQL execution.
+        Build a summary of the SQL execution.
+
+        Args:
+            rows:
+                SQL query result.
+
+        Returns:
+            User-friendly summary.
         """
 
-        row_count = len(rows)
+        row_count = len(
+            rows,
+        )
 
         if row_count == 0:
-            return self._empty_result()
+            message = self._empty_result()
+            return message
 
         if row_count == 1:
-            return self._single_result()
+            message = self._single_result()
+            return message
 
-        return self._multiple_results(
-            row_count,
+        message = self._multiple_results(
+            row_count=row_count,
         )
+
+        return message
 
     # ==========================================================
     # PRIVATE
     # ==========================================================
 
-    def _empty_result(self) -> str:
+    @staticmethod
+    def _empty_result() -> str:
         """
         Return the message displayed when no rows are returned.
         """
 
-        return EMPTY_RESULT_MESSAGE
+        message = _EMPTY_RESULT_MESSAGE
 
-    def _single_result(self) -> str:
+        return message
+
+    @staticmethod
+    def _single_result() -> str:
         """
-        Return the message displayed for a single row.
+        Return the message displayed when exactly one row is returned.
         """
 
-        return SINGLE_RESULT_MESSAGE
+        message = _SINGLE_RESULT_MESSAGE
 
+        return message
+
+    @staticmethod
     def _multiple_results(
-        self,
+        *,
         row_count: int,
     ) -> str:
         """
-        Return the message displayed for multiple rows.
+        Return the message displayed when multiple rows are returned.
         """
 
-        return MULTIPLE_RESULTS_TEMPLATE.format(
+        message = _MULTIPLE_RESULTS_TEMPLATE.format(
             total=row_count,
         )
+
+        return message

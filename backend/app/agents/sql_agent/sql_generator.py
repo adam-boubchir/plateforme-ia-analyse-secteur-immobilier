@@ -4,42 +4,44 @@ import re
 
 from app.services.llm_service import LLMService
 
-__all__ = ["SQLGenerator"]
+__all__ = ("SQLGenerator",)
 
+# ==========================================================
+# CONSTANTS
+# ==========================================================
 
-CANNOT_GENERATE_SQL = "CANNOT_GENERATE_SQL"
+_CANNOT_GENERATE_SQL = "CANNOT_GENERATE_SQL"
 
-MARKDOWN_SQL_REGEX = r"```sql"
+_MARKDOWN_SQL_REGEX = r"```sql"
+_SQL_REGEX = r"(SELECT|WITH)\b.*"
 
-SQL_REGEX = r"(SELECT|WITH)\b.*"
-
-SQL_PREFIXES = (
+_SQL_PREFIXES = (
     "SQL:",
     "Sql:",
     "sql:",
 )
 
-AGENT_NAME = "sql_agent"
+_AGENT_NAME = "sql_agent"
 
 
 class SQLGenerator:
     """
-    Generate a SQL query from the LLM response.
+    Generate a SQL query from a Large Language Model.
 
     Responsibilities
     ----------------
     - Send the prompt to the LLM.
-    - Extract the SQL statement from the response.
-    - Remove Markdown and formatting artifacts.
+    - Extract the SQL statement.
+    - Remove formatting artifacts.
     - Return a normalized SQL query.
     """
 
     def __init__(
         self,
+        *,
         llm_service: LLMService,
     ) -> None:
-
-        self.llm_service = llm_service
+        self._llm_service = llm_service
 
     # ==========================================================
     # PUBLIC
@@ -47,24 +49,34 @@ class SQLGenerator:
 
     def generate(
         self,
+        *,
         prompt: str,
     ) -> str:
         """
-        Generate a SQL query from the given prompt.
+        Generate a SQL query from a prompt.
+
+        Args:
+            prompt:
+                Prompt sent to the language model.
+
+        Returns:
+            Normalized SQL query.
         """
 
-        response = self.llm_service.generate(
-            agent_name=AGENT_NAME,
+        response = self._llm_service.generate(
+            agent_name=_AGENT_NAME,
             prompt=prompt,
         )
 
         self._display_raw_response(
-            response,
+            response=response,
         )
 
-        return self._extract_sql(
-            response,
+        sql = self._extract_sql(
+            response=response,
         )
+
+        return sql
 
     # ==========================================================
     # PRIVATE
@@ -72,74 +84,92 @@ class SQLGenerator:
 
     def _extract_sql(
         self,
+        *,
         response: str | None,
     ) -> str:
         """
-        Extract and normalize the SQL statement returned by the LLM.
+        Extract and normalize the SQL query returned by the LLM.
+
+        Args:
+            response:
+                Raw LLM response.
+
+        Returns:
+            Normalized SQL query.
         """
 
         if not response:
             return ""
 
-        response = response.strip()
+        cleaned_response = response.strip()
 
-        if response.upper() == CANNOT_GENERATE_SQL:
-            return CANNOT_GENERATE_SQL
+        if cleaned_response.upper() == _CANNOT_GENERATE_SQL:
+            return _CANNOT_GENERATE_SQL
 
-        response = self._remove_markdown(
-            response,
+        cleaned_response = self._remove_markdown(
+            response=cleaned_response,
         )
 
-        response = self._remove_prefixes(
-            response,
+        cleaned_response = self._remove_prefixes(
+            response=cleaned_response,
         )
 
-        response = self._extract_statement(
-            response,
+        cleaned_response = self._extract_statement(
+            response=cleaned_response,
         )
 
-        return self._normalize_sql(
-            response,
+        normalized_sql = self._normalize_sql(
+            sql=cleaned_response,
         )
 
+        return normalized_sql
+
+    @staticmethod
     def _remove_markdown(
-        self,
+        *,
         response: str,
     ) -> str:
         """
         Remove Markdown code fences.
         """
 
-        response = re.sub(
-            MARKDOWN_SQL_REGEX,
+        cleaned_response = re.sub(
+            _MARKDOWN_SQL_REGEX,
             "",
             response,
             flags=re.IGNORECASE,
         )
 
-        return response.replace(
+        cleaned_response = cleaned_response.replace(
             "```",
             "",
         ).strip()
 
+        return cleaned_response
+
+    @staticmethod
     def _remove_prefixes(
-        self,
+        *,
         response: str,
     ) -> str:
         """
         Remove common SQL prefixes.
         """
 
-        for prefix in SQL_PREFIXES:
+        cleaned_response = response
 
-            if response.startswith(prefix):
+        for prefix in _SQL_PREFIXES:
+            if cleaned_response.startswith(prefix):
+                cleaned_response = cleaned_response[
+                    len(prefix):
+                ].strip()
+                break
 
-                return response[len(prefix):].strip()
+        return cleaned_response
 
-        return response
-
+    @staticmethod
     def _extract_statement(
-        self,
+        *,
         response: str,
     ) -> str:
         """
@@ -147,39 +177,46 @@ class SQLGenerator:
         """
 
         match = re.search(
-            SQL_REGEX,
+            _SQL_REGEX,
             response,
             flags=re.IGNORECASE | re.DOTALL,
         )
 
         if match:
+            sql = match.group(0)
+        else:
+            sql = response
 
-            return match.group(0)
+        return sql
 
-        return response
-
+    @staticmethod
     def _normalize_sql(
-        self,
+        *,
         sql: str,
     ) -> str:
         """
-        Normalize the SQL statement.
+        Normalize a SQL query.
         """
 
-        sql = sql.strip()
+        normalized_sql = sql.strip()
 
-        if sql.endswith(";"):
+        if normalized_sql.endswith(";"):
+            normalized_sql = normalized_sql[:-1]
 
-            sql = sql[:-1]
+        normalized_sql = normalized_sql.strip()
 
-        return sql.strip()
+        return normalized_sql
 
+    @staticmethod
     def _display_raw_response(
-        self,
+        *,
         response: str,
     ) -> None:
         """
-        Display the raw LLM response for debugging purposes.
+        Display the raw LLM response.
+
+        This method is intended for debugging and can later be
+        replaced by the application logger.
         """
 
         print()

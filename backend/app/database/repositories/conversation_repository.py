@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.database.entities.conversation import (
-    Conversation,
-)
-from app.database.repositories.base_repository import (
-    BaseRepository,
-)
+from app.database.entities.conversation import Conversation
+from app.database.repositories.base_repository import BaseRepository
+
+__all__ = [
+    "ConversationRepository",
+]
 
 
 class ConversationRepository(BaseRepository):
@@ -26,6 +28,7 @@ class ConversationRepository(BaseRepository):
 
     def create(
         self,
+        *,
         conversation: Conversation,
     ) -> Conversation:
         """
@@ -46,6 +49,7 @@ class ConversationRepository(BaseRepository):
 
     def get_by_id(
         self,
+        *,
         conversation_id: int,
     ) -> Conversation | None:
         """
@@ -53,19 +57,17 @@ class ConversationRepository(BaseRepository):
         """
 
         statement = (
-            select(
-                Conversation,
-            ).where(
+            select(Conversation)
+            .where(
                 Conversation.id == conversation_id,
             )
         )
 
-        return self.db.scalar(
-            statement,
-        )
+        return self._db.scalar(statement)
 
     def get_by_uuid(
         self,
+        *,
         conversation_uuid: str,
     ) -> Conversation | None:
         """
@@ -73,16 +75,13 @@ class ConversationRepository(BaseRepository):
         """
 
         statement = (
-            select(
-                Conversation,
-            ).where(
+            select(Conversation)
+            .where(
                 Conversation.conversation_uuid == conversation_uuid,
             )
         )
 
-        return self.db.scalar(
-            statement,
-        )
+        return self._db.scalar(statement)
 
     def get_all(
         self,
@@ -92,17 +91,14 @@ class ConversationRepository(BaseRepository):
         """
 
         statement = (
-            select(
-                Conversation,
-            ).order_by(
+            select(Conversation)
+            .order_by(
                 Conversation.last_message_at.desc(),
             )
         )
 
         return list(
-            self.db.scalars(
-                statement,
-            )
+            self._db.scalars(statement)
         )
 
     # ==========================================================
@@ -111,6 +107,7 @@ class ConversationRepository(BaseRepository):
 
     def update(
         self,
+        *,
         conversation: Conversation,
     ) -> Conversation:
         """
@@ -127,17 +124,13 @@ class ConversationRepository(BaseRepository):
 
     def delete(
         self,
+        *,
         conversation: Conversation,
     ) -> None:
         """
         Delete a conversation.
         """
 
-        self.db.delete(
-            instance=conversation,
+        super().delete(
+            entity=conversation,
         )
-
-
-__all__ = [
-    "ConversationRepository",
-]

@@ -1,0 +1,59 @@
+version: 1.0
+
+selection:
+  recommendation_limit: 3
+  minimum_score: 20
+
+weights:
+
+  intent:
+
+    comparison:
+      bar: 40
+      horizontal_bar: 35
+
+    trend:
+      line: 45
+      area: 35
+
+    distribution:
+      histogram: 40
+
+    ranking:
+      horizontal_bar: 45
+
+    geographic:
+      map: 60
+
+    correlation:
+      scatter: 50
+
+    composition:
+      pie: 40
+      donut: 35
+
+    summary:
+      table: 20
+      kpi_card: 25
+
+  dataset:
+
+    datetime_columns:
+      line: 20
+      area: 15
+
+    categorical_numeric:
+      bar: 20
+      horizontal_bar: 15
+
+    multiple_numeric:
+      scatter: 20
+
+    geographic_columns:
+      map: 30
+
+  statistics:
+
+    available:
+      table: 10
+      kpi_card: 15

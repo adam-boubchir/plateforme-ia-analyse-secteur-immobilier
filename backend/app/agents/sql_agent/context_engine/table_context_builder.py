@@ -4,15 +4,15 @@ from typing import Any
 
 from app.services.metadata_service import MetadataService
 
-__all__ = ["TableContextBuilder"]
+__all__ = ("TableContextBuilder",)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-SECTION_SEPARATOR = "=" * 100
-SECTION_TITLE = "DATABASE TABLES"
-COLUMN_TITLE = "Columns:"
+_SECTION_SEPARATOR = "=" * 100
+_SECTION_TITLE = "DATABASE TABLES"
+_COLUMN_TITLE = "Columns:"
 
 
 class TableContextBuilder:
@@ -24,9 +24,10 @@ class TableContextBuilder:
 
     def __init__(
         self,
+        *,
         metadata_service: MetadataService,
     ) -> None:
-        self.metadata_service = metadata_service
+        self._metadata_service = metadata_service
 
     # ==========================================================
     # PUBLIC
@@ -34,6 +35,7 @@ class TableContextBuilder:
 
     def build(
         self,
+        *,
         selected_tables: list[str],
     ) -> list[str]:
         """
@@ -41,24 +43,24 @@ class TableContextBuilder:
         """
 
         context = [
-            SECTION_TITLE,
+            _SECTION_TITLE,
             "",
         ]
 
         for table in self._get_selected_tables(
-            selected_tables,
+            selected_tables=selected_tables,
         ):
             context.extend(
                 self._build_table(
-                    table,
+                    table=table,
                 )
             )
 
         context.extend(
-            [
-                SECTION_SEPARATOR,
+            (
+                _SECTION_SEPARATOR,
                 "",
-            ]
+            )
         )
 
         return context
@@ -69,42 +71,45 @@ class TableContextBuilder:
 
     def _get_selected_tables(
         self,
+        *,
         selected_tables: list[str],
     ) -> list[Any]:
         """
-        Return only the selected metadata tables.
+        Return the metadata of the selected tables.
         """
 
         return [
             table
-            for table in self.metadata_service.get_tables()
+            for table in self._metadata_service.get_tables()
             if table.table_name in selected_tables
         ]
 
     def _build_table(
         self,
+        *,
         table: Any,
     ) -> list[str]:
         """
         Build one table description.
         """
 
-        context = [
+        return [
             f"TABLE : {table.table_name}",
-            *self._build_table_metadata(table),
-            COLUMN_TITLE,
+            *self._build_table_metadata(
+                table=table,
+            ),
+            _COLUMN_TITLE,
             *self._build_columns(
-                self.metadata_service.get_columns(
-                    table.table_name,
-                )
+                columns=self._metadata_service.get_columns(
+                    table_name=table.table_name,
+                ),
             ),
             "",
         ]
 
-        return context
-
+    @staticmethod
     def _build_table_metadata(
-        self,
+        *,
         table: Any,
     ) -> list[str]:
         """
@@ -143,6 +148,7 @@ class TableContextBuilder:
 
     def _build_columns(
         self,
+        *,
         columns: list[Any],
     ) -> list[str]:
         """
@@ -150,12 +156,15 @@ class TableContextBuilder:
         """
 
         return [
-            self._build_column(column)
+            self._build_column(
+                column=column,
+            )
             for column in columns
         ]
 
+    @staticmethod
     def _build_column(
-        self,
+        *,
         column: Any,
     ) -> str:
         """

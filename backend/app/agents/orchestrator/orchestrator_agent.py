@@ -6,7 +6,7 @@ from app.agents.orchestrator.orchestrator_prompt_builder import (
 )
 from app.agents.orchestrator.orchestrator_schema import OrchestratorDecision
 
-__all__ = ["OrchestratorAgent"]
+__all__ = ("OrchestratorAgent",)
 
 
 class OrchestratorAgent:
@@ -26,11 +26,12 @@ class OrchestratorAgent:
 
     def __init__(
         self,
+        *,
         prompt_builder: OrchestratorPromptBuilder,
         generator: OrchestratorGenerator,
     ) -> None:
-        self.prompt_builder = prompt_builder
-        self.generator = generator
+        self._prompt_builder = prompt_builder
+        self._generator = generator
 
     # ==========================================================
     # PUBLIC
@@ -38,6 +39,7 @@ class OrchestratorAgent:
 
     def route(
         self,
+        *,
         question: str,
     ) -> OrchestratorDecision:
         """
@@ -47,13 +49,13 @@ class OrchestratorAgent:
             question: User natural language question.
 
         Returns:
-            OrchestratorDecision describing the selected agent.
+            The routing decision produced by the orchestrator.
         """
 
-        prompt = self.prompt_builder.build_prompt(
+        prompt = self._prompt_builder.build_prompt(
             question=question,
         )
 
-        return self.generator.generate(
+        return self._generator.generate(
             prompt=prompt,
         )

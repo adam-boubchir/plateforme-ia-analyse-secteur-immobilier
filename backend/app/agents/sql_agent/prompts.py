@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agents.sql_agent.few_shot_provider import FewShotProvider
+from app.agents.sql_agent.few_shot_provider import (
+    FewShotProvider,
+)
 
-__all__ = ["PromptBuilder"]
+__all__ = ("PromptBuilder",)
 
 # ==========================================================
 # CONSTANTS
@@ -24,17 +26,15 @@ EXPECTED_SQL_OUTPUT = "Return ONLY the SQL query."
 
 class PromptBuilder:
     """
-    Build the final prompt sent to the SQL LLM.
+    Build the final prompt sent to the SQL language model.
 
-    This class assembles:
-
-        • System instructions
-        • Dynamic rules
-        • Database context
-        • Few-shot examples
-        • User question
-
-    No business logic should be implemented here.
+    Responsibilities
+    ----------------
+    - Assemble the system prompt.
+    - Build dynamic instructions.
+    - Insert the database context.
+    - Insert few-shot examples.
+    - Produce the final prompt.
     """
 
     SYSTEM_PROMPT = """
@@ -76,9 +76,10 @@ Nothing else.
 
     def __init__(
         self,
+        *,
         few_shot_provider: FewShotProvider,
     ) -> None:
-        self.few_shot_provider = few_shot_provider
+        self._few_shot_provider = few_shot_provider
 
     # ==========================================================
     # PUBLIC
@@ -86,48 +87,66 @@ Nothing else.
 
     def build_prompt(
         self,
+        *,
         question: str,
         context: str,
         selection: dict[str, Any],
     ) -> str:
         """
-        Build the final prompt sent to the LLM.
+        Build the final prompt sent to the SQL language model.
+
+        Args:
+            question:
+                User natural-language question.
+
+            context:
+                Database context.
+
+            selection:
+                Knowledge selection.
+
+        Returns:
+            Complete prompt.
         """
 
         dynamic_rules = self._build_dynamic_rules(
-            selection,
+            selection=selection,
         )
 
-        examples = self.few_shot_provider.get_examples(
-            question,
+        examples = self._few_shot_provider.get_examples(
+            question=question,
         )
 
         sections = [
             self.SYSTEM_PROMPT,
             self._section(
-                QUESTION_ANALYSIS,
-                dynamic_rules,
+                title=QUESTION_ANALYSIS,
+                body=dynamic_rules,
             ),
             self._section(
-                DATABASE_CONTEXT,
-                context,
+                title=DATABASE_CONTEXT,
+                body=context,
             ),
             self._section(
-                FEW_SHOT_EXAMPLES,
-                examples,
+                title=FEW_SHOT_EXAMPLES,
+                body=examples,
             ),
             self._section(
-                USER_QUESTION,
-                question,
+                title=USER_QUESTION,
+                body=question,
             ),
             self._section(
-                EXPECTED_OUTPUT,
-                EXPECTED_SQL_OUTPUT,
+                title=EXPECTED_OUTPUT,
+                body=EXPECTED_SQL_OUTPUT,
             ),
             "SQL:",
         ]
 
-        return "\n\n".join(sections).strip()
+        prompt = "\n\n".join(
+            sections,
+        ).strip()
+
+        return prompt
 
     # ==========================================================
     # PRIVATE
@@ -135,6 +154,7 @@ Nothing else.
 
     def _section(
         self,
+        *,
         title: str,
         body: str,
     ) -> str:
@@ -142,15 +162,18 @@ Nothing else.
         Build one formatted prompt section.
         """
 
-        return (
+        section = (
             f"{SECTION_SEPARATOR}\n"
             f"{title}\n"
             f"{SECTION_SEPARATOR}\n\n"
             f"{body}"
         )
 
+        return section
+
     def _build_list_section(
         self,
+        *,
         title: str,
         values: list[str],
         rules: list[str],
@@ -162,17 +185,22 @@ Nothing else.
         if not values:
             return
 
-        rules.append(f"{title}:")
+        rules.append(
+            f"{title}:",
+        )
 
         rules.extend(
             f"• {value}"
             for value in values
         )
 
-        rules.append("")
+        rules.append(
+            "",
+        )
 
+    @staticmethod
     def _add_aggregation_rules(
-        self,
+        *,
         rules: list[str],
     ) -> None:
         """
@@ -187,8 +215,9 @@ Nothing else.
             ]
         )
 
+    @staticmethod
     def _add_time_series_rules(
-        self,
+        *,
         rules: list[str],
     ) -> None:
         """
@@ -204,8 +233,9 @@ Nothing else.
             ]
         )
 
+    @staticmethod
     def _add_geographic_rules(
-        self,
+        *,
         rules: list[str],
     ) -> None:
         """
@@ -220,8 +250,9 @@ Nothing else.
             ]
         )
 
+    @staticmethod
     def _add_join_rules(
-        self,
+        *,
         rules: list[str],
     ) -> None:
         """
@@ -238,49 +269,56 @@ Nothing else.
 
     def _build_dynamic_rules(
         self,
+        *,
         selection: dict[str, Any],
     ) -> str:
         """
-        Build prompt instructions according
-        to the detected question.
+        Build dynamic prompt instructions.
+
+        Args:
+            selection:
+                Knowledge selection.
+
+        Returns:
+            Dynamic prompt instructions.
         """
 
         rules: list[str] = []
 
         self._build_list_section(
-            "Business Domains",
-            selection.get(
+            title="Business Domains",
+            values=selection.get(
                 "business_domains",
                 [],
             ),
-            rules,
+            rules=rules,
         )
 
         self._build_list_section(
-            "Question Types",
-            selection.get(
+            title="Question Types",
+            values=selection.get(
                 "question_types",
                 [],
             ),
-            rules,
+            rules=rules,
         )
 
         self._build_list_section(
-            "Selected Tables",
-            selection.get(
+            title="Selected Tables",
+            values=selection.get(
                 "tables",
                 [],
             ),
-            rules,
+            rules=rules,
         )
 
         self._build_list_section(
-            "Detected SQL Patterns",
-            selection.get(
+            title="Detected SQL Patterns",
+            values=selection.get(
                 "sql_patterns",
                 [],
             ),
-            rules,
+            rules=rules,
         )
 
         if selection.get(
@@ -288,7 +326,7 @@ Nothing else.
             False,
         ):
             self._add_aggregation_rules(
-                rules,
+                rules=rules,
             )
 
         if selection.get(
@@ -296,7 +334,7 @@ Nothing else.
             False,
         ):
             self._add_time_series_rules(
-                rules,
+                rules=rules,
             )
 
         if selection.get(
@@ -304,7 +342,7 @@ Nothing else.
             False,
         ):
             self._add_geographic_rules(
-                rules,
+                rules=rules,
             )
 
         if selection.get(
@@ -312,7 +350,7 @@ Nothing else.
             False,
         ):
             self._add_join_rules(
-                rules,
+                rules=rules,
             )
 
         if not rules:
@@ -320,4 +358,8 @@ Nothing else.
                 DEFAULT_RULE_MESSAGE,
             )
 
-        return "\n".join(rules)
+        dynamic_rules = "\n".join(
+            rules,
+        )
+
+        return dynamic_rules

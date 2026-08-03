@@ -1,228 +1,262 @@
+from __future__ import annotations
+
 import re
+from typing import TypedDict
+
+__all__ = ("EntityDetector",)
+
+
+class DetectedEntities(TypedDict):
+    """
+    Structured entities extracted from a user question.
+    """
+
+    years: list[int]
+    year_ranges: list[tuple[int, int]]
+    numbers: list[float]
+    regions: list[str]
+    materials: list[str]
+    products: list[str]
 
 
 class EntityDetector:
     """
-    Detect entities contained in a natural language question.
+    Detect structured entities contained in a natural-language question.
 
-    This class performs lexical extraction only.
-    It never queries the database.
+    Responsibilities
+    ----------------
+    - Detect years.
+    - Detect year ranges.
+    - Detect numeric values.
+    - Detect Moroccan regions.
+    - Detect construction materials.
+    - Detect construction product identifiers.
     """
 
-    YEAR_PATTERN = r"\b(19\d{2}|20\d{2}|21\d{2})\b"
-
-    YEAR_RANGE_PATTERN = (
-        r"\b(19\d{2}|20\d{2}|21\d{2})\s*(?:-|à|to)\s*(19\d{2}|20\d{2}|21\d{2})\b"
+    _YEAR_PATTERN = re.compile(
+        r"\b(19\d{2}|20\d{2}|21\d{2})\b",
     )
 
-    NUMBER_PATTERN = r"\b\d+(?:[.,]\d+)?\b"
+    _YEAR_RANGE_PATTERN = re.compile(
+        r"\b(19\d{2}|20\d{2}|21\d{2})\s*(?:-|à|to)\s*(19\d{2}|20\d{2}|21\d{2})\b",
+    )
 
-    PRODUCT_PATTERN = r"\bcpj[-\s]*([0-9]+)\b"
+    _NUMBER_PATTERN = re.compile(
+        r"\b\d+(?:[.,]\d+)?\b",
+    )
 
-    MATERIAL_KEYWORDS = {
+    _PRODUCT_PATTERN = re.compile(
+        r"\bcpj[-\s]*([0-9]+)\b",
+    )
 
-        "acier",
-        "ciment",
-        "beton",
-        "béton",
-        "sable",
-        "gravette",
-        "bois",
-        "bitume",
-        "cuivre",
-        "marbre",
-        "granit",
-        "verre",
-        "platre",
-        "plâtre",
-        "chaux",
-        "aluminium",
+    _MATERIAL_KEYWORDS: frozenset[str] = frozenset(
+        {
+            "acier",
+            "ciment",
+            "beton",
+            "béton",
+            "sable",
+            "gravette",
+            "bois",
+            "bitume",
+            "cuivre",
+            "marbre",
+            "granit",
+            "verre",
+            "platre",
+            "plâtre",
+            "chaux",
+            "aluminium",
+        }
+    )
 
-    }
+    _REGION_KEYWORDS: frozenset[str] = frozenset(
+        {
+            "tanger",
+            "tetouan",
+            "tétouan",
+            "hoceima",
+            "al hoceima",
+            "oriental",
+            "fes",
+            "fès",
+            "meknes",
+            "meknès",
+            "rabat",
+            "sale",
+            "salé",
+            "kenitra",
+            "kénitra",
+            "beni mellal",
+            "béni mellal",
+            "khenifra",
+            "khénifra",
+            "casablanca",
+            "settat",
+            "marrakech",
+            "safi",
+            "draa",
+            "drâa",
+            "tafilalet",
+            "souss",
+            "massa",
+            "guelmim",
+            "laayoune",
+            "dakhla",
+        }
+    )
 
-    REGION_KEYWORDS = {
-
-        "tanger",
-        "tetouan",
-        "tétouan",
-        "hoceima",
-        "al hoceima",
-
-        "oriental",
-
-        "fes",
-        "fès",
-
-        "meknes",
-        "meknès",
-
-        "rabat",
-
-        "sale",
-        "salé",
-
-        "kenitra",
-        "kénitra",
-
-        "beni mellal",
-        "béni mellal",
-
-        "khenifra",
-        "khénifra",
-
-        "casablanca",
-
-        "settat",
-
-        "marrakech",
-
-        "safi",
-
-        "draa",
-        "drâa",
-
-        "tafilalet",
-
-        "souss",
-
-        "massa",
-
-        "guelmim",
-
-        "laayoune",
-
-        "dakhla",
-
-    }
-
-    def _normalize_text(
-        self,
-        question: str,
-    ) -> str:
-        """
-        Normalize the user question before extraction.
-        """
-        return question.lower()
+    # ==========================================================
+    # PUBLIC
+    # ==========================================================
 
     def detect(
         self,
+        *,
         question: str,
-    ) -> dict:
+    ) -> DetectedEntities:
+        """
+        Detect structured entities from a natural-language question.
 
-        text = self._normalize_text(question)
+        Args:
+            question: User question.
 
-        return {
+        Returns:
+            Dictionary containing every detected entity.
+        """
 
-            "years": self._extract_years(text),
+        text = self._normalize_text(
+            question=question,
+        )
 
-            "year_ranges": self._extract_year_ranges(text),
-
-            "numbers": self._extract_numbers(text),
-
+        entities: DetectedEntities = {
+            "years": self._extract_years(
+                text=text,
+            ),
+            "year_ranges": self._extract_year_ranges(
+                text=text,
+            ),
+            "numbers": self._extract_numbers(
+                text=text,
+            ),
             "regions": self._extract_keywords(
-                text,
-                self.REGION_KEYWORDS,
+                text=text,
+                vocabulary=self._REGION_KEYWORDS,
             ),
-
             "materials": self._extract_keywords(
-                text,
-                self.MATERIAL_KEYWORDS,
+                text=text,
+                vocabulary=self._MATERIAL_KEYWORDS,
             ),
-
-            "products": self._extract_products(text),
-
+            "products": self._extract_products(
+                text=text,
+            ),
         }
 
-    # -----------------------------------------------------
+        return entities
 
+    # ==========================================================
+    # PRIVATE
+    # ==========================================================
+
+    @staticmethod
+    def _normalize_text(
+        *,
+        question: str,
+    ) -> str:
+        """Normalize the user question."""
+
+        normalized_question = question.casefold().strip()
+
+        return normalized_question
+
+    @classmethod
     def _extract_years(
-        self,
+        cls,
+        *,
         text: str,
     ) -> list[int]:
+        """Extract unique years."""
 
-        return sorted({
+        years = sorted(
+            {
+                int(year)
+                for year in cls._YEAR_PATTERN.findall(text)
+            }
+        )
 
-            int(year)
+        return years
 
-            for year in re.findall(
-                self.YEAR_PATTERN,
-                text,
-            )
-
-        })
-
-    # -----------------------------------------------------
-
+    @classmethod
     def _extract_year_ranges(
-        self,
+        cls,
+        *,
         text: str,
     ) -> list[tuple[int, int]]:
+        """Extract year ranges."""
 
-        return [
+        year_ranges = [
             (int(start), int(end))
-            for start, end in re.findall(
-                self.YEAR_RANGE_PATTERN,
-                text,
-            )
+            for start, end in cls._YEAR_RANGE_PATTERN.findall(text)
         ]
 
-    # -----------------------------------------------------
+        return year_ranges
 
+    @classmethod
     def _extract_numbers(
-        self,
+        cls,
+        *,
         text: str,
     ) -> list[float]:
+        """Extract numeric values."""
 
-        numbers = []
+        numbers: list[float] = []
 
-        for value in re.findall(
-            self.NUMBER_PATTERN,
-            text,
-        ):
-
+        for value in cls._NUMBER_PATTERN.findall(text):
             try:
-
                 numbers.append(
                     float(
-                        value.replace(",", ".")
+                        value.replace(",", "."),
                     )
                 )
-
             except ValueError:
-
                 continue
 
         return numbers
 
-    # -----------------------------------------------------
-
+    @staticmethod
     def _extract_keywords(
-        self,
+        *,
         text: str,
-        vocabulary: set[str],
+        vocabulary: frozenset[str],
     ) -> list[str]:
+        """Extract keywords from a predefined vocabulary."""
 
-        return sorted({
+        keywords = sorted(
+            {
+                keyword
+                for keyword in vocabulary
+                if re.search(
+                    rf"\b{re.escape(keyword)}\b",
+                    text,
+                )
+            }
+        )
 
-            keyword
+        return keywords
 
-            for keyword in vocabulary
-
-            if keyword in text
-
-        })
-
-    # -----------------------------------------------------
-
+    @classmethod
     def _extract_products(
-        self,
+        cls,
+        *,
         text: str,
     ) -> list[str]:
+        """Extract construction product identifiers."""
 
-        return sorted({
-            f"CPJ {value}"
-            for value in re.findall(
-                self.PRODUCT_PATTERN,
-                text,
-            )
-        })
+        products = sorted(
+            {
+                f"CPJ {value}"
+                for value in cls._PRODUCT_PATTERN.findall(text)
+            }
+        )
+
+        return products

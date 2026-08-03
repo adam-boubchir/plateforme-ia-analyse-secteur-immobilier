@@ -2,19 +2,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-__all__ = [
+__all__ = (
     "Rule",
     "RULES",
-]
+)
 
 
-@dataclass(slots=True)
+@dataclass(
+    slots=True,
+)
 class Rule:
     """
-    Represents a business rule used by the KnowledgeSelector.
+    Business rule used by the KnowledgeSelector.
 
-    A rule defines:
-    - keywords that activate it;
+    A rule describes:
+
+    - activation keywords;
     - related database tables;
     - business metadata;
     - SQL generation hints.
@@ -22,9 +25,13 @@ class Rule:
 
     name: str
 
-    keywords: list[str] = field(default_factory=list)
+    keywords: list[str] = field(
+        default_factory=list,
+    )
 
-    tables: list[str] = field(default_factory=list)
+    tables: list[str] = field(
+        default_factory=list,
+    )
 
     business_domain: str | None = None
 

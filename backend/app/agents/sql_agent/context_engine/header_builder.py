@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-__all__ = ["HeaderBuilder"]
+__all__ = ("HeaderBuilder",)
 
 # ==========================================================
 # CONSTANTS
 # ==========================================================
 
-SECTION_SEPARATOR = "=" * 100
+_SECTION_SEPARATOR = "=" * 100
 
-SECTION_TITLE = "DATABASE CONTEXT"
-DATABASE_SECTION_TITLE = "DATABASE"
+_SECTION_TITLE = "DATABASE CONTEXT"
+_DATABASE_SECTION_TITLE = "DATABASE"
 
-DATABASE_NAME = "OBSERVATOIRE_STAGIAIRE"
-DATABASE_PURPOSE = "Moroccan Real Estate Observatory"
-DATABASE_LANGUAGE = "French"
-DATABASE_CURRENCY = "MAD"
+_DATABASE_NAME = "OBSERVATOIRE_STAGIAIRE"
+_DATABASE_PURPOSE = "Moroccan Real Estate Observatory"
+_DATABASE_LANGUAGE = "French"
+_DATABASE_CURRENCY = "MAD"
 
 
 class HeaderBuilder:
@@ -31,17 +31,20 @@ class HeaderBuilder:
     ) -> list[str]:
         """
         Build the database header section.
+
+        Returns:
+            List of formatted header lines.
         """
 
         return [
-            SECTION_SEPARATOR,
-            SECTION_TITLE,
-            SECTION_SEPARATOR,
+            _SECTION_SEPARATOR,
+            _SECTION_TITLE,
+            _SECTION_SEPARATOR,
             "",
-            DATABASE_SECTION_TITLE,
+            _DATABASE_SECTION_TITLE,
             *self._build_database_information(),
             "",
-            SECTION_SEPARATOR,
+            _SECTION_SEPARATOR,
             "",
         ]
 
@@ -49,16 +52,18 @@ class HeaderBuilder:
     # PRIVATE
     # ==========================================================
 
-    def _build_database_information(
-        self,
-    ) -> list[str]:
+    @staticmethod
+    def _build_database_information() -> list[str]:
         """
-        Build the database information.
+        Build the database information block.
+
+        Returns:
+            List of database metadata lines.
         """
 
         return [
-            f"Name : {DATABASE_NAME}",
-            f"Purpose : {DATABASE_PURPOSE}",
-            f"Language : {DATABASE_LANGUAGE}",
-            f"Currency : {DATABASE_CURRENCY}",
+            f"Name : {_DATABASE_NAME}",
+            f"Purpose : {_DATABASE_PURPOSE}",
+            f"Language : {_DATABASE_LANGUAGE}",
+            f"Currency : {_DATABASE_CURRENCY}",
         ]

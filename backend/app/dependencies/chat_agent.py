@@ -1,20 +1,11 @@
+from __future__ import annotations
+
 from sqlalchemy.orm import Session
 
-from app.agents.chat_agent.chat_agent import (
-    ChatAgent,
-)
-
-from app.agents.chat_agent.chat_generator import (
-    ChatGenerator,
-)
-
-from app.agents.chat_agent.chat_prompt_builder import (
-    ChatPromptBuilder,
-)
-
-from app.dependencies.llm import (
-    get_llm_service,
-)
+from app.agents.chat_agent.chat_agent import ChatAgent
+from app.agents.chat_agent.chat_generator import ChatGenerator
+from app.agents.chat_agent.chat_prompt_builder import ChatPromptBuilder
+from app.dependencies.llm import get_llm_service
 
 
 # ==========================================================
@@ -25,16 +16,16 @@ def get_chat_generator(
     db: Session,
 ) -> ChatGenerator:
     """
-    Dependency responsible for creating the ChatGenerator.
+    Create and configure the ChatGenerator.
     """
 
-    return ChatGenerator(
-
-        get_llm_service(
-            db
-        )
-
+    chat_generator = ChatGenerator(
+        llm_service=get_llm_service(
+            db=db,
+        ),
     )
+
+    return chat_generator
 
 
 # ==========================================================
@@ -45,19 +36,14 @@ def get_chat_agent(
     db: Session,
 ) -> ChatAgent:
     """
-    Dependency responsible for creating the ChatAgent.
+    Create and configure the ChatAgent.
     """
 
-    prompt_builder = ChatPromptBuilder()
-
-    generator = get_chat_generator(
-        db
+    chat_agent = ChatAgent(
+        prompt_builder=ChatPromptBuilder(),
+        generator=get_chat_generator(
+            db=db,
+        ),
     )
 
-    return ChatAgent(
-
-        prompt_builder=prompt_builder,
-
-        generator=generator,
-
-    )
+    return chat_agent
