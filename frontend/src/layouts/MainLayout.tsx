@@ -2,29 +2,67 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../components/sidebar/Sidebar";
 
 const MainLayout = () => {
-    return (
-        <div
-            className="
-                flex
-                min-h-screen
-                bg-[#0f0f0f]
-                text-white
-            "
-        >
-            <Sidebar />
+  return (
+    <div
+      className="
+        h-screen
+        w-screen
+        overflow-hidden
 
-            <main
-                className="
-                    flex-1
-                    flex
-                    flex-col
-                    overflow-y-auto
-                "
-            >
-                <Outlet />
-            </main>
+        flex
+
+        bg-[#0b1120]
+        text-white
+      "
+    >
+      <Sidebar />
+
+      <main
+        className="
+          relative
+
+          flex-1
+
+          overflow-hidden
+
+          flex
+          flex-col
+        "
+      >
+        {/* Background */}
+
+        <div
+          className="
+            absolute
+            inset-0
+
+            pointer-events-none
+
+            bg-[radial-gradient(circle_at_top_right,#2563eb22,transparent_35%),radial-gradient(circle_at_bottom_left,#06b6d422,transparent_35%)]
+
+            opacity-30
+          "
+        />
+
+        {/* Content */}
+
+        <div
+          className="
+            relative
+
+            flex-1
+
+            overflow-hidden
+
+            flex
+            flex-col
+          "
+        >
+          <Outlet />
         </div>
-    );
+      </main>
+    </div>
+  );
 };
 
 export default MainLayout;

@@ -2,15 +2,17 @@ import { create } from "zustand";
 
 export interface Message {
 
-  id: string;
+    id: string;
 
-  role: "user" | "assistant";
+    role: "user" | "assistant";
 
-  content: string;
+    content: string;
 
-  sql?: string | null;
+    sql?: string | null;
 
-  rows?: unknown[];
+    rows?: unknown[];
+
+    pdf_path?: string | null;
 
 }
 

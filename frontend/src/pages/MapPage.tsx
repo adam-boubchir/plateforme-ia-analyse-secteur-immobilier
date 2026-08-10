@@ -250,7 +250,21 @@ export default function MapPage() {
 
     return (
 
-        <div className="bg-[#0f172a] text-white">
+        <div
+            className="
+                h-full
+                min-h-0
+                overflow-y-auto
+                overflow-x-hidden
+
+                bg-[#0f172a]
+                text-white
+
+                scrollbar-thin
+                scrollbar-thumb-slate-700
+                scrollbar-track-transparent
+            "
+        >
 
             <div className="grid grid-cols-12 gap-6 p-6">
 

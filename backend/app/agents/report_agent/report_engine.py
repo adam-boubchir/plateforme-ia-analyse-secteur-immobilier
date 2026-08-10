@@ -27,6 +27,13 @@ from app.visualization.visualization_engine import (
 
 from app.agents.report_agent.report_models import DatasetMetadata
 
+from app.pdf.pdf_generator import (
+    PDFGenerator,
+)
+
+from app.pdf.pdf_report_builder import (
+    PDFReportBuilder,
+)
 
 class ReportEngine:
     """
@@ -68,12 +75,17 @@ class ReportEngine:
         context_builder: VisualizationContextBuilder,
         visualization_engine: VisualizationEngine,
         report_generator: ReportGenerator,
+        pdf_report_builder: PDFReportBuilder,
+        pdf_generator: PDFGenerator,
     ) -> None:
         self._analyzer = analyzer
         self._statistics_calculator = statistics_calculator
         self._context_builder = context_builder
         self._visualization_engine = visualization_engine
         self._report_generator = report_generator
+
+        self._pdf_report_builder = pdf_report_builder
+        self._pdf_generator = pdf_generator
 
     # ==========================================================
     # PUBLIC API
@@ -122,11 +134,18 @@ class ReportEngine:
             charts=charts,
         )
 
+        pdf_path = self._generate_pdf(
+            request=request,
+            analysis=analysis,
+            markdown=markdown,
+        )
+
         return self._build_report_result(
             request=request,
             analysis=analysis,
             markdown=markdown,
             charts=charts,
+            pdf_path=pdf_path,
         )
 
     # ==========================================================
@@ -210,6 +229,47 @@ class ReportEngine:
     # RESULT
     # ==========================================================
 
+    def _generate_pdf(
+        self,
+        *,
+        request: ReportRequest,
+        analysis: ReportAnalysis,
+        markdown: str,
+    ) -> str | None:
+        """
+        Generate the PDF report and return its path.
+        """
+
+        document = self._pdf_report_builder.create(
+
+            title=self._build_title(
+                request=request,
+                analysis=analysis,
+            ),
+
+            subtitle="Rapport généré automatiquement",
+
+            question=request.question,
+
+            answer=markdown,
+
+            sql=request.sql,
+
+            rows=request.rows,
+
+            author=request.author
+            or "Ministère de l'Habitat",
+
+        )
+
+        pdf_path = self._pdf_generator.generate(
+
+            document=document,
+
+        )
+
+        return pdf_path
+
     def _build_report_result(
         self,
         *,
@@ -217,6 +277,7 @@ class ReportEngine:
         analysis: ReportAnalysis,
         markdown: str,
         charts: list[ChartRecommendation],
+        pdf_path: str | None,
     ) -> ReportResult:
         """
         Assemble the final report returned by the Report Agent.
@@ -235,9 +296,53 @@ class ReportEngine:
             recommendations=[],
             sections=[],
             charts=charts,
+            pdf_path=pdf_path,
             generated_at=request.generated_at,
             row_count=analysis.dataset.row_count,
             column_count=analysis.dataset.column_count,
+        )
+
+    # ==========================================================
+    # EMPTY REPORT
+    # ==========================================================
+
+    def _build_empty_report(
+        self,
+        *,
+        request: ReportRequest,
+    ) -> ReportResult:
+        """
+        Build a report result when the SQL query
+        returns no rows.
+        """
+
+        return ReportResult(
+            title="Rapport - Aucun résultat",
+            executive_summary=(
+                "Aucune donnée n'a été retournée "
+                "par la requête SQL."
+            ),
+            objective=request.question,
+            methodology=self._DEFAULT_METHODOLOGY,
+            markdown=(
+                "# Aucun résultat\n\n"
+                "La requête exécutée n'a retourné "
+                "aucune donnée exploitable pour générer "
+                "une analyse."
+            ),
+            conclusions=[
+                "Aucun résultat n'a été trouvé."
+            ],
+            recommendations=[
+                "Vérifier les critères de recherche "
+                "ou élargir la période d'analyse."
+            ],
+            sections=[],
+            charts=[],
+            pdf_path=None,
+            generated_at=request.generated_at,
+            row_count=0,
+            column_count=0,
         )
 
     # ==========================================================

@@ -7,254 +7,303 @@ import { useConversationStore } from "../../store/conversationStore";
 
 const ChatInput = () => {
 
-  const [question, setQuestion] = useState("");
+    const [question, setQuestion] = useState("");
 
-  const addMessage = useChatStore(
-    state => state.addMessage
-  );
+    const addMessage = useChatStore(
+        state => state.addMessage
+    );
 
-  const setLoading = useChatStore(
-    state => state.setLoading
-  );
+    const setLoading = useChatStore(
+        state => state.setLoading
+    );
 
-  const isLoading = useChatStore(
-    state => state.isLoading
-  );
+    const isLoading = useChatStore(
+        state => state.isLoading
+    );
 
-  const activeConversation = useConversationStore(
-    state => state.activeConversation
-  );
+    const activeConversation = useConversationStore(
+        state => state.activeConversation
+    );
 
-  const setCurrentConversation = useConversationStore(
-    state => state.setCurrentConversation
-  );
+    const setCurrentConversation = useConversationStore(
+        state => state.setCurrentConversation
+    );
 
-  const loadConversations = useConversationStore(
-    state => state.loadConversations
-  );
+    const loadConversations = useConversationStore(
+        state => state.loadConversations
+    );
 
-  const handleSend = async () => {
+    const handleSend = async () => {
 
-    if (!question.trim() || isLoading) {
+        if (!question.trim() || isLoading) {
+            return;
+        }
 
-      return;
+        const userQuestion = question.trim();
 
-    }
+        addMessage({
+            role: "user",
+            content: userQuestion,
+        });
 
-    const userQuestion = question.trim();
+        setQuestion("");
 
-    addMessage({
+        setLoading(true);
 
-      role: "user",
+        try {
 
-      content: userQuestion,
+            const response = await sendMessage({
 
-    });
+                question: userQuestion,
 
-    setQuestion("");
+                conversation_uuid:
+                    activeConversation?.conversation_uuid,
 
-    setLoading(true);
+            });
 
-    try {
+            addMessage({
 
-      const response = await sendMessage({
+                role: "assistant",
 
-        question: userQuestion,
+                content: response.answer,
 
-        conversation_uuid:
-          activeConversation?.conversation_uuid,
+                sql: response.sql,
 
-      });
+                rows: response.rows,
 
-      addMessage({
+                pdf_path: response.pdf_path,
 
-        role: "assistant",
+            });
+            await loadConversations();
 
-        content: response.answer,
+            if (response.conversation_uuid) {
 
-        sql: response.sql,
+                setCurrentConversation(
+                    response.conversation_uuid
+                );
 
-        rows: response.rows,
+            }
 
-      });
+        }
 
-      await loadConversations();
+        catch (error) {
 
-      if (response.conversation_uuid) {
+            console.error(error);
 
-        setCurrentConversation(
-          response.conversation_uuid
-        );
+            addMessage({
 
-      }
+                role: "assistant",
 
-    }
+                content:
+                    "❌ Une erreur est survenue lors de la communication avec le serveur.",
 
-    catch (error) {
+            });
 
-      console.error(error);
+        }
 
-      addMessage({
+        finally {
 
-        role: "assistant",
+            setLoading(false);
 
-        content:
-          "❌ Une erreur est survenue lors de la communication avec le serveur.",
+        }
 
-      });
+    };
 
-    }
-
-    finally {
-
-      setLoading(false);
-
-    }
-
-  };
-
-  return (
-
-    <div
-      className="
-        border-t
-        border-white/10
-        bg-[#0f0f0f]
-        px-8
-        py-6
-      "
-    >
-
-      <div
-        className="
-          mx-auto
-          max-w-5xl
-        "
-      >
+    return (
 
         <div
-          className="
-            flex
-            items-end
-            gap-3
-            rounded-3xl
-            border
-            border-white/10
-            bg-[#1b1b1b]
-            px-5
-            py-4
-            shadow-xl
-            transition-all
-            focus-within:border-blue-500
-            focus-within:shadow-blue-500/20
-          "
+            className="
+                shrink-0
+
+                border-t
+                border-white/10
+
+                bg-[#0f172a]/80
+                backdrop-blur-xl
+
+                px-6
+                py-5
+            "
         >
 
-          <textarea
+            <div
+                className="
+                    mx-auto
+                    w-full
+                    max-w-6xl
+                "
+            >
 
-            rows={1}
+                <div
+                    className="
+                        flex
+                        items-end
+                        gap-4
 
-            value={question}
+                        rounded-[30px]
 
-            disabled={isLoading}
+                        border
+                        border-slate-700/70
 
-            onChange={(e) =>
-              setQuestion(e.target.value)
-            }
+                        bg-[#1b1b1b]
 
-            onKeyDown={(e) => {
+                        px-6
+                        py-5
 
-              if (
+                        shadow-2xl
 
-                e.key === "Enter" &&
+                        transition-all
+                        duration-300
 
-                !e.shiftKey
+                        focus-within:border-blue-500
+                        focus-within:shadow-blue-500/20
+                    "
+                >
 
-              ) {
+                    <textarea
 
-                e.preventDefault();
+                        rows={1}
 
-                handleSend();
+                        value={question}
 
-              }
+                        disabled={isLoading}
 
-            }}
+                        onChange={(e) =>
+                            setQuestion(e.target.value)
+                        }
 
-            placeholder="Posez une question sur les données immobilières..."
+                        onKeyDown={(e) => {
 
-            className="
-              flex-1
-              resize-none
-              bg-transparent
-              text-white
-              placeholder:text-gray-500
-              outline-none
-              max-h-40
-              leading-7
-            "
+                            if (
 
-          />
+                                e.key === "Enter" &&
 
-          <button
+                                !e.shiftKey
 
-            onClick={handleSend}
+                            ) {
 
-            disabled={
-              isLoading ||
-              question.trim() === ""
-            }
+                                e.preventDefault();
 
-            className="
-              h-11
-              w-11
-              rounded-full
-              bg-blue-600
-              hover:bg-blue-500
-              disabled:bg-[#333]
-              disabled:cursor-not-allowed
-              flex
-              items-center
-              justify-center
-              transition-all
-              shadow-lg
-              hover:scale-105
-            "
+                                handleSend();
 
-          >
+                            }
 
-            {
+                        }}
 
-              isLoading
+                        placeholder="Posez une question sur les données immobilières..."
 
-                ? "⏳"
+                        className="
+                            flex-1
 
-                : <ArrowUp size={18} />
+                            resize-none
 
-            }
+                            bg-transparent
 
-          </button>
+                            text-[15px]
+                            leading-7
+
+                            text-white
+
+                            placeholder:text-slate-500
+
+                            outline-none
+
+                            max-h-52
+                        "
+
+                    />
+
+                    <button
+
+                        onClick={handleSend}
+
+                        disabled={
+                            isLoading ||
+                            question.trim() === ""
+                        }
+
+                        className="
+                            flex
+
+                            h-12
+                            w-12
+
+                            items-center
+                            justify-center
+
+                            rounded-2xl
+
+                            bg-gradient-to-br
+                            from-blue-600
+                            to-cyan-500
+
+                            text-white
+
+                            shadow-xl
+
+                            transition-all
+                            duration-300
+
+                            hover:scale-105
+                            hover:shadow-blue-500/40
+
+                            disabled:opacity-40
+                            disabled:cursor-not-allowed
+                            disabled:hover:scale-100
+                        "
+
+                    >
+
+                        {
+
+                            isLoading
+
+                                ? <span className="animate-pulse">⏳</span>
+
+                                : <ArrowUp size={20}/>
+
+                        }
+
+                    </button>
+
+                </div>
+
+                <div
+                    className="
+                        mt-3
+
+                        flex
+                        items-center
+                        justify-between
+
+                        px-2
+
+                        text-xs
+
+                        text-slate-500
+                    "
+                >
+
+                    <span>
+
+                        Entrée pour envoyer • Shift + Entrée pour une nouvelle ligne
+
+                    </span>
+
+                    <span>
+
+                        Plateforme IA • Ministère de l'Habitat
+
+                    </span>
+
+                </div>
+
+            </div>
 
         </div>
 
-        <p
-          className="
-            mt-3
-            text-center
-            text-xs
-            text-gray-500
-          "
-        >
-
-          Immobilier AI peut générer des réponses inexactes. Vérifiez les résultats importants.
-
-        </p>
-
-      </div>
-
-    </div>
-
-  );
+    );
 
 };
 
-export default ChatInput; 
+export default ChatInput;

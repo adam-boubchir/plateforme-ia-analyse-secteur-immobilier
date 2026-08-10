@@ -52,4 +52,6 @@ class ChatResponse(BaseModel):
         description="SQL query result rows.",
     )
 
+    pdf_path: str | None = None
+
     error: str | None = None

@@ -42,6 +42,8 @@ export interface ConversationMessage {
 
     status: string;
 
+    pdf_path: string | null;
+
     created_at: string;
 
 }

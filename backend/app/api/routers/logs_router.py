@@ -105,7 +105,7 @@ def get_log(
     )
 
     log = service.get_log(
-        log_id
+        log_id=log_id,
     )
 
     if log is None:

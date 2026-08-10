@@ -429,7 +429,7 @@ const SQLResultTable = ({ rows }: Props) => {
 
       <div
         className="
-          max-h-[700px]
+          max-h-[55vh]
           overflow-auto
         "
       >
@@ -550,6 +550,7 @@ const SQLResultTable = ({ rows }: Props) => {
                         : "bg-white/[0.015]"
                     }
                     hover:bg-blue-500/5
+                    cursor-pointer
                   `}
 
                 >

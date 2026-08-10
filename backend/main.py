@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # Register ORM entities.
 import app.database.entities
@@ -32,7 +35,6 @@ __all__ = (
     "create_app",
 )
 
-
 # ==========================================================
 # MIDDLEWARES
 # ==========================================================
@@ -51,10 +53,6 @@ def _configure_middlewares(
 ) -> None:
     """
     Configure all application middlewares.
-
-    Args:
-        app:
-            FastAPI application instance.
     """
 
     app.add_middleware(
@@ -76,10 +74,6 @@ def _register_routers(
 ) -> None:
     """
     Register all API routers.
-
-    Args:
-        app:
-            FastAPI application instance.
     """
 
     app.include_router(health_router)
@@ -96,9 +90,6 @@ def _register_routers(
 def create_app() -> FastAPI:
     """
     Create and configure the FastAPI application.
-
-    Returns:
-        A fully configured FastAPI application.
     """
 
     application = FastAPI(
@@ -106,13 +97,51 @@ def create_app() -> FastAPI:
         version="1.0.0",
     )
 
+    # ======================================================
+    # STORAGE
+    # ======================================================
+
+    storage_path = (
+        Path.cwd()
+        / "storage"
+    ).resolve()
+
+    storage_path.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    print(
+        f"[STORAGE] Serving files from: {storage_path}"
+    )
+
+    application.mount(
+        "/storage",
+        StaticFiles(
+            directory=str(storage_path),
+        ),
+        name="storage",
+    )
+
+    # ======================================================
+    # EXCEPTION HANDLERS
+    # ======================================================
+
     register_exception_handlers(
         app=application,
     )
 
+    # ======================================================
+    # MIDDLEWARES
+    # ======================================================
+
     _configure_middlewares(
         app=application,
     )
+
+    # ======================================================
+    # ROUTERS
+    # ======================================================
 
     _register_routers(
         app=application,
@@ -129,6 +158,7 @@ app = create_app()
 # ==========================================================
 
 if __name__ == "__main__":
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

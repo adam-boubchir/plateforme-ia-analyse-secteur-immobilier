@@ -8,9 +8,10 @@ export interface ChatRequest {
 
 export interface ChatResponse {
     success: boolean;
-    conversation_uuid: string | null;
+    conversation_uuid?: string | null;
     answer: string;
     sql: string | null;
     rows: unknown[];
+    pdf_path?: string | null;
     error: string | null;
 }

@@ -1,237 +1,191 @@
 import { useState } from "react";
-
 import {
-  Clipboard,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Database,
+    Clipboard,
+    Check,
+    ChevronDown,
+    ChevronUp,
+    Database,
 } from "lucide-react";
 
 type Props = {
-  sql: string;
+    sql: string;
 };
 
 const SQLViewer = ({ sql }: Props) => {
 
-  const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+    const [copied, setCopied] = useState(false);
 
-  const [copied, setCopied] = useState(false);
+    const copySql = async () => {
 
-  const copySql = async () => {
+        await navigator.clipboard.writeText(sql);
 
-    await navigator.clipboard.writeText(sql);
+        setCopied(true);
 
-    setCopied(true);
+        setTimeout(() => {
 
-    setTimeout(() => {
+            setCopied(false);
 
-      setCopied(false);
+        }, 1500);
 
-    }, 2000);
+    };
 
-  };
+    return (
 
-  return (
+        <div className="mt-8">
 
-    <div className="mt-10">
+            {/* Header */}
 
-      <button
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="
+                    w-full
 
-        onClick={() => setExpanded(!expanded)}
+                    flex
+                    items-center
+                    justify-between
 
-        className="
-          w-full
-          rounded-2xl
-          border
-          border-white/10
-          bg-[#1d1d1d]
-          hover:bg-[#252525]
-          transition-all
-          duration-200
-          px-6
-          py-5
-          flex
-          items-center
-          justify-between
-        "
+                    rounded-xl
 
-      >
+                    border
+                    border-slate-700/40
 
-        <div className="flex items-center gap-3">
+                    bg-[#181818]
 
-          <div
-            className="
-              h-10
-              w-10
-              rounded-xl
-              bg-blue-600/20
-              flex
-              items-center
-              justify-center
-            "
-          >
+                    px-5
+                    py-4
 
-            <Database
-              size={18}
-              className="text-blue-400"
-            />
+                    hover:bg-[#1d1d1d]
 
-          </div>
+                    transition-all
+                "
+            >
 
-          <div className="text-left">
+                <div className="flex items-center gap-3">
 
-            <div className="font-semibold">
+                    <Database
+                        size={16}
+                        className="text-blue-400"
+                    />
 
-              SQL généré
+                    <span
+                        className="
+                            text-sm
+                            font-medium
+                            text-white
+                        "
+                    >
+                        SQL Server
+                    </span>
 
-            </div>
+                </div>
 
-            <div className="text-xs text-gray-400">
+                <div className="flex items-center gap-3">
 
-              Cliquez pour afficher la requête
+                    <button
+                        onClick={(e) => {
 
-            </div>
+                            e.stopPropagation();
 
-          </div>
+                            copySql();
+
+                        }}
+                        className="
+                            flex
+                            items-center
+                            gap-2
+
+                            rounded-lg
+
+                            px-3
+                            py-2
+
+                            text-xs
+
+                            hover:bg-white/5
+                        "
+                    >
+
+                        {
+
+                            copied
+
+                                ? <Check size={15}/>
+
+                                : <Clipboard size={15}/>
+
+                        }
+
+                        {
+
+                            copied
+
+                                ? "Copié"
+
+                                : "Copier"
+
+                        }
+
+                    </button>
+
+                    {
+
+                        expanded
+
+                            ? <ChevronUp size={18}/>
+
+                            : <ChevronDown size={18}/>
+
+                    }
+
+                </div>
+
+            </button>
+
+            {
+
+                expanded && (
+
+                    <pre
+                        className="
+                            mt-3
+
+                            overflow-x-auto
+
+                            rounded-xl
+
+                            border
+                            border-slate-700/40
+
+                            bg-[#0d1117]
+
+                            p-6
+
+                            text-[13px]
+
+                            leading-7
+
+                            text-slate-200
+
+                            font-mono
+                        "
+                    >
+
+                        <code>
+
+                            {sql}
+
+                        </code>
+
+                    </pre>
+
+                )
+
+            }
 
         </div>
 
-        {
-
-          expanded
-
-            ? <ChevronUp size={20} />
-
-            : <ChevronDown size={20} />
-
-        }
-
-      </button>
-
-      {
-
-        expanded && (
-
-          <div
-            className="
-              mt-4
-              rounded-2xl
-              overflow-hidden
-              border
-              border-white/10
-              shadow-xl
-            "
-          >
-
-            <div
-              className="
-                flex
-                items-center
-                justify-between
-                bg-[#181818]
-                px-6
-                py-4
-                border-b
-                border-white/10
-              "
-            >
-
-              <div className="flex items-center gap-3">
-
-                <span
-                  className="
-                    rounded-full
-                    bg-blue-600
-                    px-3
-                    py-1
-                    text-xs
-                    font-semibold
-                  "
-                >
-
-                  SQL
-
-                </span>
-
-                <span className="text-sm text-gray-400">
-
-                  Microsoft SQL Server
-
-                </span>
-
-              </div>
-
-              <button
-
-                onClick={copySql}
-
-                className="
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  hover:bg-[#252525]
-                  transition
-                "
-
-              >
-
-                {
-
-                  copied
-
-                    ? <Check size={17} />
-
-                    : <Clipboard size={17} />
-
-                }
-
-                {
-
-                  copied
-
-                    ? "Copié"
-
-                    : "Copier"
-
-                }
-
-              </button>
-
-            </div>
-
-            <pre
-              className="
-                bg-[#0d1117]
-                text-green-400
-                overflow-x-auto
-                p-7
-                text-[14px]
-                leading-8
-                font-mono
-              "
-            >
-
-              <code>
-
-                {sql}
-
-              </code>
-
-            </pre>
-
-          </div>
-
-        )
-
-      }
-
-    </div>
-
-  );
+    );
 
 };
 

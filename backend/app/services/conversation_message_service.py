@@ -99,6 +99,7 @@ class ConversationMessageService:
         execution_time_ms: int | None = None,
         rows_returned: int | None = None,
         rows: list[dict[str, object]] | None = None,
+        pdf_path: str | None = None,
     ) -> ConversationMessage:
         """
         Store an assistant message.
@@ -134,6 +135,7 @@ class ConversationMessageService:
             execution_time_ms=execution_time_ms,
             rows_returned=rows_returned,
             rows=rows,
+            pdf_path=pdf_path,
         )
 
         return message
@@ -223,6 +225,7 @@ class ConversationMessageService:
         execution_time_ms: int | None = None,
         rows_returned: int | None = None,
         rows: list[dict[str, object]] | None = None,
+        pdf_path: str | None = None,
     ) -> ConversationMessage:
         """
         Create and persist one conversation message.
@@ -264,6 +267,7 @@ class ConversationMessageService:
             content=content,
             generated_sql=generated_sql,
             result_json=result_json,
+            pdf_path=pdf_path,
             execution_time_ms=execution_time_ms,
             rows_returned=rows_returned,
             status=_COMPLETED_STATUS,

@@ -52,6 +52,8 @@ class ConversationMessageResponse(BaseModel):
 
     status: str
 
+    pdf_path: str | None = None
+
     created_at: datetime
 
     class Config:

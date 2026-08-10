@@ -70,19 +70,40 @@ class AzureProvider(BaseProvider):
         )
 
         try:
+            print("=" * 80)
+            print("PROMPT LENGTH (chars):", len(prompt))
+            print("PROMPT (first 2000 chars):")
+            print(prompt[:2000])
+            print("=" * 80)
+            print("PROMPT (last 2000 chars):")
+            print(prompt[-2000:])
+            print("=" * 80)
+
             response = client.chat.completions.create(
                 model=config.deployment_name,
                 messages=messages,
+                reasoning_effort="low",
                 temperature=config.temperature,
                 top_p=config.top_p,
                 frequency_penalty=config.frequency_penalty,
                 presence_penalty=config.presence_penalty,
                 max_completion_tokens=config.max_tokens,
             )
+
             print("=" * 80)
             print("AZURE RAW RESPONSE")
             print(response)
             print("=" * 80)
+
+            print("PROMPT TOKENS :", response.usage.prompt_tokens)
+            print("COMPLETION TOKENS :", response.usage.completion_tokens)
+            print("TOTAL TOKENS :", response.usage.total_tokens)
+
+            if hasattr(response.usage, "completion_tokens_details"):
+                print(response.usage.completion_tokens_details)
+
+            if hasattr(response.usage, "prompt_tokens_details"):
+                print(response.usage.prompt_tokens_details)
 
             print("FINISH REASON:", response.choices[0].finish_reason)
             print("MESSAGE:", repr(response.choices[0].message.content))

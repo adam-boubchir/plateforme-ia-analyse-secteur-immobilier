@@ -14,8 +14,13 @@ from app.database.repositories.base_repository import BaseRepository
 
 class MapRepository(BaseRepository):
 
-    def __init__(self, db: Session):
-        super().__init__(db)
+    def __init__(
+        self,
+        db: Session,
+    ) -> None:
+        super().__init__(
+            db=db,
+        )
 
     # ==========================================================
     # Régions
@@ -26,7 +31,7 @@ class MapRepository(BaseRepository):
         Retourne toutes les régions.
         """
         return (
-            self.db.query(Region)
+            self._db.query(Region)
             .order_by(Region.nom_region.asc())
             .all()
         )
@@ -41,7 +46,7 @@ class MapRepository(BaseRepository):
         """
 
         return (
-            self.db.query(Region)
+            self._db.query(Region)
             .filter(
                 Region.code_iso == code_iso
             )
@@ -57,7 +62,7 @@ class MapRepository(BaseRepository):
         """
 
         return (
-            self.db.query(Region)
+            self._db.query(Region)
             .filter(
                 Region.id_region == region_id
             )
@@ -75,7 +80,7 @@ class MapRepository(BaseRepository):
         keyword = keyword.strip()
 
         return (
-            self.db.query(Region)
+            self._db.query(Region)
             .filter(
                 (Region.nom_region.ilike(f"%{keyword}%"))
                 | (Region.code_region.ilike(f"%{keyword}%"))
@@ -104,7 +109,7 @@ class MapRepository(BaseRepository):
             return None
 
         nombre_provinces = (
-            self.db.query(
+            self._db.query(
                 func.count(ProvincePrefecture.id_province)
             )
             .filter(
@@ -114,7 +119,7 @@ class MapRepository(BaseRepository):
         )
 
         prix = (
-            self.db.query(
+            self._db.query(
                 func.avg(FactPrixIndices.prix_moyen),
                 func.avg(FactPrixIndices.indice),
             )
@@ -144,7 +149,7 @@ class MapRepository(BaseRepository):
         """
 
         return (
-            self.db.query(
+            self._db.query(
                 FactPrixIndices.annee.label("annee"),
                 NiveauMateriau.nom.label("materiau"),
                 FactPrixIndices.prix_moyen.label("prix_moyen"),
@@ -177,7 +182,7 @@ class MapRepository(BaseRepository):
         """
 
         return (
-            self.db.query(
+            self._db.query(
                 FactIndicateurHabitat.annee.label("annee"),
                 TypeHabitat.nom_type.label("type_habitat"),
                 FactIndicateurHabitat.type_indicateur.label("type_indicateur"),
@@ -211,7 +216,7 @@ class MapRepository(BaseRepository):
         """
 
         return (
-            self.db.query(
+            self._db.query(
                 ProvincePrefecture.id_province,
                 ProvincePrefecture.nom_province,
             )
@@ -332,7 +337,7 @@ class MapRepository(BaseRepository):
         year: int | None = None,
     ):
         query = (
-            self.db.query(
+            self._db.query(
                 FactPrixIndices.annee.label("annee"),
                 NiveauMateriau.nom.label("materiau"),
                 FactPrixIndices.prix_moyen.label("prix_moyen"),
@@ -371,7 +376,7 @@ class MapRepository(BaseRepository):
         year: int | None = None,
     ):
         query = (
-            self.db.query(
+            self._db.query(
                 FactIndicateurHabitat.annee.label("annee"),
                 TypeHabitat.nom_type.label("type_habitat"),
                 FactIndicateurHabitat.type_indicateur.label("type_indicateur"),
@@ -402,7 +407,7 @@ class MapRepository(BaseRepository):
 
     def get_available_years(self):
         return (
-            self.db.query(FactPrixIndices.annee)
+            self._db.query(FactPrixIndices.annee)
             .distinct()
             .order_by(FactPrixIndices.annee.desc())
             .all()
@@ -411,7 +416,7 @@ class MapRepository(BaseRepository):
 
     def get_materials(self):
         return (
-            self.db.query(
+            self._db.query(
                 NiveauMateriau.id,
                 NiveauMateriau.nom,
             )

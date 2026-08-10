@@ -4,95 +4,80 @@ import { useChatStore } from "../../store/chatStore";
 import MessageBubble from "./MessageBubble";
 
 const ChatMessages = () => {
+    const messages = useChatStore(
+        (state) => state.messages,
+    );
 
-  const messages = useChatStore(
-    state => state.messages
-  );
+    const isLoading = useChatStore(
+        (state) => state.isLoading,
+    );
 
-  const isLoading = useChatStore(
-    state => state.isLoading
-  );
+    const bottomRef = useRef<HTMLDivElement>(null);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+        });
+    }, [messages, isLoading]);
 
-  useEffect(() => {
+    return (
+        <div
+            className="
+                flex-1
 
-    bottomRef.current?.scrollIntoView({
+                overflow-y-auto
+                overflow-x-hidden
 
-      behavior: "smooth",
+                scroll-smooth
 
-    });
+                px-6
+                md:px-10
+                lg:px-14
 
-  }, [messages, isLoading]);
+                py-8
+            "
+        >
+            <div
+                className="
+                    mx-auto
 
-  return (
+                    flex
+                    flex-col
 
-    <div
-      className="
-        flex-1
-        overflow-y-auto
-        overflow-x-hidden
-        px-10
-        py-10
-      "
-    >
+                    w-full
+                    max-w-6xl
 
-      <div
-        className="
-          mx-auto
-          w-full
-          max-w-5xl
-          space-y-16
-          animate-[fadeIn_.25s_ease]
-        "
-      >
+                    gap-8
 
-        {
+                    pb-10
+                "
+            >
+                {messages.map((message) => (
+                    <MessageBubble
+                        key={message.id}
+                        role={message.role}
+                        content={message.content}
+                        sql={message.sql}
+                        rows={message.rows}
+                        pdf_path={message.pdf_path}
+                    />
+                ))}
 
-          messages.map(message => (
+                {isLoading && (
+                    <MessageBubble
+                        role="assistant"
+                        content="🤖 Analyse de votre demande..."
+                    />
+                )}
 
-            <MessageBubble
-
-              key={message.id}
-
-              role={message.role}
-
-              content={message.content}
-
-              sql={message.sql}
-
-              rows={message.rows}
-
-            />
-
-          ))
-
-        }
-
-        {
-
-          isLoading && (
-
-            <MessageBubble
-
-              role="assistant"
-
-              content="⏳ L'assistant réfléchit..."
-
-            />
-
-          )
-
-        }
-
-        <div ref={bottomRef} />
-
-      </div>
-
-    </div>
-
-  );
-
+                <div
+                    ref={bottomRef}
+                    className="h-2"
+                />
+            </div>
+        </div>
+    );
 };
 
-export default ChatMessages;
+export default ChatMessages;    

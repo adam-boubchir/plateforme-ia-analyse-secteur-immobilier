@@ -144,6 +144,7 @@ class ReportAgent(BaseAgent):
             sql=sql_response.sql,
             rows=sql_response.rows,
             data=report,
+            pdf_path=report.pdf_path,
         )
 
     # ==========================================================

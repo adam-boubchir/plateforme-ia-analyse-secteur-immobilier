@@ -35,6 +35,17 @@ from app.visualization.intent_detector import (
 from app.visualization.visualization_engine import (
     VisualizationEngine,
 )
+from app.pdf.pdf_generator import (
+    PDFGenerator,
+)
+
+from app.pdf.pdf_report_builder import (
+    PDFReportBuilder,
+)
+
+from app.storage.storage_service import (
+    StorageService,
+)
 
 __all__ = (
     "get_report_engine",
@@ -96,10 +107,20 @@ def get_report_engine(
         prompt_builder=prompt_builder,
     )
 
+    storage_service = StorageService()
+
+    pdf_report_builder = PDFReportBuilder()
+
+    pdf_generator = PDFGenerator(
+        storage_service=storage_service,
+    )
+
     return ReportEngine(
         analyzer=analyzer,
         statistics_calculator=statistics_calculator,
         context_builder=context_builder,
         visualization_engine=visualization_engine,
         report_generator=report_generator,
+        pdf_report_builder=pdf_report_builder,
+        pdf_generator=pdf_generator,
     )

@@ -78,6 +78,7 @@ def _serialize_message(
         "rows_returned": message.rows_returned,
         "execution_time_ms": message.execution_time_ms,
         "status": message.status,
+        "pdf_path": message.pdf_path,
         "created_at": message.created_at,
     }
 
@@ -212,7 +213,7 @@ def get_conversation_logs(
         )
 
     logs = log_service.get_logs_by_conversation(
-        conversation.id,
+        conversation_id=conversation.id,
     )
 
     return {

@@ -214,6 +214,7 @@ class ChatService:
             generated_sql=response.sql,
             rows_returned=rows_returned,
             rows=response.rows,
+            pdf_path=response.pdf_path,
         )
 
     def _finalize_conversation(
@@ -271,3 +272,23 @@ class ChatService:
                 conversation=conversation,
                 title=title,
             )
+
+    def get_conversation(
+        self,
+        *,
+        conversation_uuid: str,
+    ) -> Conversation:
+        """
+        Return an existing conversation.
+        """
+
+        conversation = self._conversation_service.get_by_uuid(
+            conversation_uuid=conversation_uuid,
+        )
+
+        if conversation is None:
+            raise ValueError(
+                "Conversation not found.",
+            )
+
+        return conversation

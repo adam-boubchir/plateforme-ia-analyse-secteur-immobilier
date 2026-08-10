@@ -104,6 +104,7 @@ def chat(
         answer=result.answer,
         sql=result.sql,
         rows=result.rows,
+        pdf_path=getattr(result, "pdf_path", None),
         error=result.error,
     )
 

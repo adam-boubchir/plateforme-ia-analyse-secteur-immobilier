@@ -366,6 +366,8 @@ persist(
 
         rows: message.rows ?? undefined,
 
+        pdf_path: message.pdf_path ?? null,
+
       }))
 
     );
