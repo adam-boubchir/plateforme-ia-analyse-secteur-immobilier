@@ -219,9 +219,11 @@ class ReportEngine:
         """
         Generate the Markdown report using the language model.
         """
-        markdown = self._report_generator.generate(question=request.question,
+        markdown = self._report_generator.generate(
+                    question=request.question,
                     analysis=analysis,
                     charts=charts,
+                    rows=request.rows,
                 )
         return markdown.strip()
 

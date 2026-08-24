@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app.agents.report_agent.report_models import ReportAnalysis
 from app.agents.report_agent.report_prompt_builder import ReportPromptBuilder
 from app.services.llm_service import LLMService
@@ -34,6 +36,7 @@ class ReportGenerator:
         question: str,
         analysis: ReportAnalysis,
         charts: list[ChartRecommendation],
+        rows: list[dict[str, Any]],
     ) -> str:
         """
         Build the prompt sent to the LLM.
@@ -43,6 +46,7 @@ class ReportGenerator:
             question=question,
             analysis=analysis,
             charts=charts,
+            rows=rows,
         )
 
     def generate(
@@ -51,9 +55,24 @@ class ReportGenerator:
         question: str,
         analysis: ReportAnalysis,
         charts: list[ChartRecommendation],
+        rows: list[dict[str, Any]],
     ) -> str:
         """
         Generate a Markdown report.
+
+        Parameters
+        ----------
+        question:
+            Original user question.
+
+        analysis:
+            Structured analytical information.
+
+        charts:
+            Recommended visualizations.
+
+        rows:
+            Raw rows returned by the SQL query.
 
         Returns
         -------
@@ -70,6 +89,7 @@ class ReportGenerator:
             question=question,
             analysis=analysis,
             charts=charts,
+            rows=rows,
         )
 
         report = self._llm_service.generate(

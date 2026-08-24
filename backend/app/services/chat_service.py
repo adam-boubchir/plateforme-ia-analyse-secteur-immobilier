@@ -214,7 +214,11 @@ class ChatService:
             generated_sql=response.sql,
             rows_returned=rows_returned,
             rows=response.rows,
-            pdf_path=response.pdf_path,
+            pdf_path=getattr(
+                response,
+                "pdf_path",
+                None,
+            ),
         )
 
     def _finalize_conversation(

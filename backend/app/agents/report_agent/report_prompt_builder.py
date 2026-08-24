@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from app.agents.report_agent.report_models import (
     ReportAnalysis,
@@ -22,8 +23,8 @@ class ReportPromptBuilder:
 You are a Senior Business Intelligence Analyst specialized in real estate,
 urban planning, market intelligence and statistical reporting.
 
-Your mission is to transform structured analytical data into a clear,
-professional and objective business report.
+Your mission is to transform structured analytical data and SQL query
+results into a clear, professional and objective business report.
 
 ========================
 GENERAL RULES
@@ -39,7 +40,37 @@ GENERAL RULES
 - Write concise but informative paragraphs.
 - Highlight important trends.
 - Explain anomalies only if supported by statistics.
-- Base every statement on the supplied dataset.
+- Base every statement on the supplied dataset and query results.
+
+========================
+QUESTION-FIRST RULES
+========================
+
+The user's exact question has priority over general statistical analysis.
+
+- Always answer the user's exact question first.
+- The report must directly address what the user asked.
+- If the user asks "Quels sont", "Quels", "Lesquels", "Which",
+  "What are", "List", or asks for entities satisfying a condition,
+  explicitly identify the entities that satisfy the condition.
+- Do NOT replace a requested list of entities with aggregate statistics.
+- Use the supplied QUERY RESULTS to identify the requested entities.
+- Statistical summaries are complementary and must not replace the
+  requested results.
+- If the query results contain the requested entities, present them
+  clearly in the report.
+- When appropriate, use a Markdown table to present the requested
+  entities and their relevant values.
+- Do not omit the requested entities merely because the dataset contains
+  many rows.
+- If there are many matching entities, clearly state the total number
+  and provide the complete list when practical using the supplied data.
+- Never invent or reconstruct missing rows.
+- Do not change the meaning of the user's question.
+- Do not introduce MAX, MIN, AVG, SUM, COUNT or another aggregation
+  as a substitute for the user's requested result unless that
+  aggregation is explicitly present in the supplied query results or
+  is required to describe the returned data.
 
 ========================
 WRITING STYLE
@@ -69,11 +100,12 @@ EXPECTED REPORT STRUCTURE
 
 # Executive Summary
 
-Provide a short overview.
+Provide a short overview that directly answers the user's question.
 
 # Objective
 
-Explain the purpose of the analysis.
+Explain the purpose of the analysis and restate the analytical objective
+without changing its meaning.
 
 # Dataset Overview
 
@@ -81,7 +113,8 @@ Describe the dataset.
 
 # Methodology
 
-Explain that the report is generated from SQL query results and statistical analysis.
+Explain that the report is generated from SQL query results and
+statistical analysis.
 
 # Statistical Analysis
 
@@ -89,7 +122,8 @@ Interpret the computed statistics.
 
 # Key Findings
 
-Highlight the most important findings.
+Highlight the most important findings and explicitly present the
+entities requested by the user when applicable.
 
 # Recommended Visualizations
 
@@ -101,7 +135,7 @@ Provide practical recommendations supported by the data.
 
 # Conclusion
 
-Summarize the report.
+Summarize the report and directly answer the original question.
 """.strip()
 
     @staticmethod
@@ -160,12 +194,42 @@ Summarize the report.
             for insight in analysis.insights
         ]
 
+    @staticmethod
+    def _serialize_rows(
+        rows: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """
+        Convert SQL query results into JSON-serializable dictionaries.
+
+        The rows are the actual results returned by the SQL query and are
+        provided to the LLM so that it can answer entity-level questions
+        precisely instead of relying only on aggregate statistics.
+        """
+
+        serialized_rows: list[dict[str, Any]] = []
+
+        for row in rows:
+            serialized_row: dict[str, Any] = {}
+
+            for key, value in row.items():
+
+                # Handle common non-JSON-serializable values safely.
+                if hasattr(value, "isoformat"):
+                    serialized_row[key] = value.isoformat()
+                else:
+                    serialized_row[key] = value
+
+            serialized_rows.append(serialized_row)
+
+        return serialized_rows
+
     def build(
         self,
         *,
         question: str,
         analysis: ReportAnalysis,
         charts: list[ChartRecommendation],
+        rows: list[dict[str, Any]],
     ) -> str:
         """
         Build the complete prompt sent to the LLM.
@@ -185,6 +249,10 @@ Summarize the report.
             charts,
         )
 
+        query_results = self._serialize_rows(
+            rows,
+        )
+
         prompt = f"""
 {self._SYSTEM_PROMPT}
 
@@ -199,6 +267,27 @@ USER QUESTION
 ==================================================
 
 {question}
+
+==================================================
+QUERY RESULTS
+==================================================
+
+IMPORTANT:
+The following rows are the actual results returned by the SQL query
+executed for the user's question.
+
+Use these rows as the primary source for answering the user's exact
+question.
+
+Do not replace these results with generalizations based only on
+statistical summaries.
+
+{json.dumps(
+    query_results,
+    indent=2,
+    ensure_ascii=False,
+    default=str,
+)}
 
 ==================================================
 DATASET OVERVIEW
@@ -289,7 +378,10 @@ Write a professional business report.
 The report MUST:
 
 - strictly use the supplied information;
+- answer the user's exact question;
+- use the QUERY RESULTS as the primary source for the requested result;
 - never invent numerical values;
+- never invent entities or rows;
 - never infer unsupported conclusions;
 - explain the statistical results;
 - reference important indicators;
@@ -299,6 +391,15 @@ The report MUST:
 - use Markdown formatting;
 - remain objective and concise.
 
+If the user's question asks for a list of entities satisfying a condition,
+the report MUST explicitly identify those entities from QUERY RESULTS.
+
+Do not provide only minimum, maximum, average, median or other aggregate
+statistics when the user explicitly asks which entities satisfy a condition.
+
+The requested result must appear clearly in either the Executive Summary
+or Key Findings section, preferably both when appropriate.
+
 ==================================================
 OUTPUT FORMAT
 ==================================================
@@ -307,7 +408,7 @@ Generate the report using exactly this structure:
 
 # Executive Summary
 
-...
+... direct answer to the user's question ...
 
 # Objective
 
@@ -327,7 +428,7 @@ Generate the report using exactly this structure:
 
 # Key Findings
 
-...
+... requested entities and important findings ...
 
 # Recommended Visualizations
 
@@ -338,6 +439,8 @@ Generate the report using exactly this structure:
 ...
 
 # Conclusion
+
+... direct conclusion answering the user's question ...
 """
 
         return prompt.strip()
