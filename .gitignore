@@ -136,3 +136,16 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+# Project generated files
+storage/
+backend/storage/
+
+# Archives
+*.zip
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

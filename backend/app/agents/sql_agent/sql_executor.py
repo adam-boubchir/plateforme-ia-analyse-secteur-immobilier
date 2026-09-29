@@ -79,10 +79,7 @@ class SQLExecutor:
 
         try:
 
-            result = self._db.execute(
-                text(sql),
-            )
-
+            # Get database information BEFORE executing the main query
             database_name = self._db.execute(
                 text("SELECT DB_NAME()")
             ).scalar()
@@ -97,14 +94,24 @@ class SQLExecutor:
                 schema_name,
             )
 
+            # Execute the actual SQL query
+            result = self._db.execute(
+                text(sql),
+            )
+
+            # Read the result immediately
             rows = result.fetchmany(
                 _MAX_RESULT_ROWS,
             )
 
+            # Close the result explicitly
+            result.close()
+
             print()
             print("=" * 80)
             print("SQL EXECUTION RESULT")
-            print(f"DATABASE  : {self._get_database_name()}")
+            print(f"DATABASE  : {database_name}")
+            print(f"SCHEMA    : {schema_name}")
             print(f"ROW COUNT : {len(rows)}")
             print(f"ROWS      : {rows[:5]}")
             print("=" * 80)
@@ -130,7 +137,6 @@ class SQLExecutor:
         )
 
         return converted_rows
-
     # ==========================================================
     # PRIVATE
     # ==========================================================
@@ -187,12 +193,9 @@ class SQLExecutor:
         Log debug information before executing the query.
         """
 
-        database_name = self._get_database_name()
-
         print()
         print("=" * 80)
         print("SQL EXECUTOR")
-        print(f"DATABASE : {database_name}")
         print(f"SQL      : {sql}")
         print("=" * 80)
         print()
