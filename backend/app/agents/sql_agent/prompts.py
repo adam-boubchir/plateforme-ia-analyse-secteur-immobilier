@@ -72,6 +72,58 @@ return exactly:
 CANNOT_GENERATE_SQL
 
 Nothing else.
+
+===========================================================
+PREDICTION / FORECAST RULES
+===========================================================
+
+When the user asks for a prediction, forecast, projection,
+future estimation, or similar future-oriented analysis:
+
+1. SQL MUST ONLY retrieve the historical data required by
+   the prediction agent.
+
+2. NEVER perform the prediction or forecasting in SQL.
+
+3. NEVER generate:
+   - regression calculations
+   - regression parameters
+   - forecast years
+   - future dates
+   - predicted values
+   - extrapolation formulas
+   - trend-based future calculations
+
+4. The prediction model is handled outside SQL by the
+   Prediction Agent.
+
+5. Return the historical time-series data needed by the
+   Prediction Agent.
+
+6. The result MUST contain:
+   - the chronological column
+   - the requested target variable
+   - any filters explicitly requested by the user
+
+7. Do not invent a target column.
+
+8. Do not replace a requested price with an index or another
+   metric unless the user explicitly asks for that metric.
+
+9. If the requested target variable does not contain usable
+   data in the selected tables, return:
+
+CANNOT_GENERATE_SQL
+
+10. A price request MUST use an actual price column such as
+    prix_moyen when that column contains usable data.
+
+11. NEVER use indice as a substitute for prix_moyen for a
+    price prediction request.
+
+12. If prix_moyen is unavailable or contains no usable values
+    for the requested target, do not silently substitute
+    indice.
 """
 
     def __init__(

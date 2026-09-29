@@ -3,10 +3,21 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from app.agents.base.base_agent import BaseAgent
+
 from app.agents.chat_agent.chat_agent import ChatAgent
-from app.agents.orchestrator.orchestrator_schema import AgentType
+
+from app.agents.orchestrator.orchestrator_schema import (
+    AgentType,
+)
+
+from app.agents.prediction_agent.prediction_agent import (
+    PredictionAgent,
+)
+
 from app.agents.report_agent.report_agent import ReportAgent
+
 from app.agents.sql_agent.sql_agent import SQLAgent
+
 
 __all__ = (
     "AgentRegistry",
@@ -17,12 +28,8 @@ class AgentRegistry:
     """
     Registry responsible for storing and resolving AI agents.
 
-    This registry acts as the central lookup mechanism for the
-    OrchestratorService. Each AgentType is associated with a single
+    Each AgentType is associated with a single
     BaseAgent implementation.
-
-    New agents can be registered dynamically without modifying the
-    orchestrator.
     """
 
     def __init__(
@@ -31,22 +38,45 @@ class AgentRegistry:
         sql_agent: SQLAgent,
         chat_agent: ChatAgent,
         report_agent: ReportAgent,
+        prediction_agent: PredictionAgent,
     ) -> None:
+
         self._agents: dict[AgentType, BaseAgent] = {}
+
+        # ======================================================
+        # SQL AGENT
+        # ======================================================
 
         self.register(
             agent_type=AgentType.SQL,
             agent=sql_agent,
         )
 
+        # ======================================================
+        # CHAT AGENT
+        # ======================================================
+
         self.register(
             agent_type=AgentType.CHAT,
             agent=chat_agent,
         )
 
+        # ======================================================
+        # REPORT AGENT
+        # ======================================================
+
         self.register(
             agent_type=AgentType.REPORT,
             agent=report_agent,
+        )
+
+        # ======================================================
+        # PREDICTION AGENT
+        # ======================================================
+
+        self.register(
+            agent_type=AgentType.PREDICTION,
+            agent=prediction_agent,
         )
 
     # ==========================================================
@@ -60,19 +90,19 @@ class AgentRegistry:
     ) -> BaseAgent:
         """
         Return the registered agent associated with the given type.
-
-        Raises
-        ------
-        KeyError
-            If no agent is registered for the requested type.
         """
 
         try:
-            return self._agents[agent_type]
+
+            return self._agents[
+                agent_type
+            ]
 
         except KeyError as ex:
+
             raise KeyError(
-                f"No agent registered for '{agent_type.value}'.",
+                f"No agent registered for "
+                f"'{agent_type.value}'."
             ) from ex
 
     def register(
@@ -85,7 +115,9 @@ class AgentRegistry:
         Register or replace an agent implementation.
         """
 
-        self._agents[agent_type] = agent
+        self._agents[
+            agent_type
+        ] = agent
 
     def unregister(
         self,
@@ -94,14 +126,11 @@ class AgentRegistry:
     ) -> None:
         """
         Remove a registered agent.
-
-        Raises
-        ------
-        KeyError
-            If the agent is not registered.
         """
 
-        del self._agents[agent_type]
+        del self._agents[
+            agent_type
+        ]
 
     def contains(
         self,
@@ -119,7 +148,7 @@ class AgentRegistry:
         self,
     ) -> Mapping[AgentType, BaseAgent]:
         """
-        Return a read-only view of the registered agents.
+        Return a read-only view of registered agents.
         """
 
         return self._agents.copy()

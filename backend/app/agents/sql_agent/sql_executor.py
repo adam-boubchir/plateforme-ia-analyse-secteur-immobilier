@@ -83,9 +83,32 @@ class SQLExecutor:
                 text(sql),
             )
 
+            database_name = self._db.execute(
+                text("SELECT DB_NAME()")
+            ).scalar()
+
+            schema_name = self._db.execute(
+                text("SELECT SCHEMA_NAME()")
+            ).scalar()
+
+            logger.warning(
+                "SQL EXECUTOR DATABASE=%s SCHEMA=%s",
+                database_name,
+                schema_name,
+            )
+
             rows = result.fetchmany(
                 _MAX_RESULT_ROWS,
             )
+
+            print()
+            print("=" * 80)
+            print("SQL EXECUTION RESULT")
+            print(f"DATABASE  : {self._get_database_name()}")
+            print(f"ROW COUNT : {len(rows)}")
+            print(f"ROWS      : {rows[:5]}")
+            print("=" * 80)
+            print()
 
         except SQLAlchemyError as exception:
 
@@ -166,11 +189,13 @@ class SQLExecutor:
 
         database_name = self._get_database_name()
 
-        logger.debug(
-            "Database=%s SQL=%s",
-            database_name,
-            sql,
-        )
+        print()
+        print("=" * 80)
+        print("SQL EXECUTOR")
+        print(f"DATABASE : {database_name}")
+        print(f"SQL      : {sql}")
+        print("=" * 80)
+        print()
 
     @staticmethod
     def _log_execution_summary(
