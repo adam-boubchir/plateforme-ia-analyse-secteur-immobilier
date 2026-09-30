@@ -1,9 +1,1 @@
-fastapi
-uvicorn
-sqlalchemy
-pyodbc
-openai
-python-dotenv
-pydantic
-httpx
-reportlab
+fastapiuvicorn[standard]sqlalchemypyodbcopenaipython-dotenvpydantichttpxreportlabpandasnumpyprophet
